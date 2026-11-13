@@ -67,20 +67,9 @@
       <span data-i18n="tech.i18n">中英文切換</span><span data-i18n="tech.form">表單驗證</span><span>Web Audio API</span><span>Web Share API</span>
       <span>Google Apps Script</span><span data-i18n="tech.sheets">Google 試算表</span><span>localStorage</span><span>GitHub Pages</span>
     </div>
-  </section>
-
-  <section>
-    <h2 data-i18n="about.sourcesTitle">資料來源</h2>
-    <p data-i18n="about.sourcesText">網站內容整理自以下資料，如有錯誤歡迎指正。</p>
-    <details class="sources-box">
-      <summary id="sources-summary"></summary>
-      <table class="sources">
-        <thead><tr><th data-i18n="about.thCountry">國家</th><th data-i18n="about.thTopic">主題</th><th data-i18n="about.thSource">參考來源</th></tr></thead>
-        <tbody id="sources"></tbody>
-      </table>
-    </details>
     <p class="credits" data-i18n="about.credits">世界地圖資料：jsvectormap（MIT 授權）· 字型：Noto Sans TC（Google Fonts）· 音樂：用 Web Audio API 即時合成，台灣為貝多芬《給愛麗絲》，其餘為原創小曲</p>
   </section>
+
 
   <section>
     <h2 data-i18n="about.makerTitle">製作者</h2>
@@ -99,22 +88,5 @@
 <script src="data.js?v=20261113c"></script>
 <script src="i18n.js?v=20261113c"></script>
 <script src="app.js?v=20261113c"></script>
-<script>
-// 參考來源：查證後把網址或書名填進 SOURCES 就會顯示（key 是小知識的 id，例如 TW、TH2）
-const SOURCES = {
-  // TW: "例如：臺北市政府環境保護局網站",
-};
-function renderSources() {
-  document.getElementById("sources-summary").textContent = t("about.showSources", { n: FACTS.length });
-  document.getElementById("sources").innerHTML = FACTS.map(f => {
-    const c = F(f);
-    const src = SOURCES[f.id];
-    return `<tr><td>${c.emoji} ${c.name}</td><td>${c.title}</td>
-            <td class="${src ? "" : "todo"}">${src || t("about.todo")}</td></tr>`;
-  }).join("");
-}
-document.addEventListener("langchange", renderSources);
-renderSources();
-</script>
 </body>
 </html>

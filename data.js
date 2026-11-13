@@ -98,7 +98,7 @@ function saveExplored(set) {
    ========================================================= */
 
 // ★ 部署 Apps Script 後，把「網頁應用程式網址」貼在這裡（設定步驟見 README.md）
-const SHEET_URL = "";
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbwnM_9VV7-bCE6oUUsEIed9YO983MDjCgo2p5lLPe1nw4LsWg1WqnEftOBMp8SkEN34rA/exec";
 
 const EMOJIS = ["🌏", "🎉", "🍜", "🏠", "🎵", "🤔", "🐾", "🚲"];
 

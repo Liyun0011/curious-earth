@@ -955,17 +955,67 @@ async function addSubmission(formData, mode) {
     const res = await fetch(SHEET_URL, { method: "POST", body: JSON.stringify(item) });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || "投稿失敗");
+    if (data.token) rememberMyPost(data.item.id, data.token);    // 記住編輯碼，之後才能編輯
     return { item: data.item, published: data.published };
   }
 
   delete item.agree;
   item.id = "S" + Date.now();
+  rememberMyPost(item.id, "local");
   item.created_at = new Date().toISOString().slice(0, 16).replace("T", " ");
   const list = loadLocalSubmissions();
   list.unshift(item);
   try { localStorage.setItem("submissions", JSON.stringify(list)); }
   catch (e) { throw new Error("這個瀏覽器無法儲存投稿"); }
   return { item, published: true };
+}
+
+/* ---------- 編輯、刪除自己的投稿 ----------
+   投稿成功時，後端會給一組「編輯碼」，存在這個瀏覽器的 myPosts 裡；
+   只有拿得出編輯碼的人才能修改。存在瀏覽器的示範投稿，編輯碼記成 "local"。 */
+function loadMyPosts() {
+  try { return JSON.parse(localStorage.getItem("myPosts") || "{}"); }
+  catch (e) { return {}; }
+}
+function rememberMyPost(id, token) {
+  const map = loadMyPosts();
+  map[id] = token;
+  try { localStorage.setItem("myPosts", JSON.stringify(map)); } catch (e) {}
+}
+function isMyPost(id) { return Boolean(loadMyPosts()[id]); }
+
+async function editSubmission(id, formData) {
+  const token = loadMyPosts()[id];
+  if (!token) throw new Error("no permission");
+  const fields = Object.fromEntries(formData);
+  delete fields.agree;
+  if (token !== "local") {
+    const res = await fetch(SHEET_URL, { method: "POST", body: JSON.stringify({ ...fields, action: "edit", id, token }) });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "edit failed");
+    return data.item;
+  }
+  const list = loadLocalSubmissions();
+  const i = list.findIndex(s => s.id === id);
+  if (i < 0) throw new Error("not found");
+  list[i] = { ...list[i], ...fields };
+  localStorage.setItem("submissions", JSON.stringify(list));
+  return list[i];
+}
+
+async function hideSubmission(id) {
+  const token = loadMyPosts()[id];
+  if (!token) throw new Error("no permission");
+  if (token !== "local") {
+    const res = await fetch(SHEET_URL, { method: "POST", body: JSON.stringify({ action: "hide", id, token }) });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "delete failed");
+  } else {
+    localStorage.setItem("submissions", JSON.stringify(loadLocalSubmissions().filter(s => s.id !== id)));
+  }
+  const map = loadMyPosts();
+  delete map[id];
+  try { localStorage.setItem("myPosts", JSON.stringify(map)); } catch (e) {}
 }
 
 /* =========================================================

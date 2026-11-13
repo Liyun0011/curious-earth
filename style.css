@@ -60,6 +60,7 @@
 }
 body { transition: background .3s, color .3s; }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }   /* hidden 屬性永遠優先，不會被其他 display 蓋掉 */
 body {
   margin: 0;
   font-family: "Noto Sans TC", system-ui, sans-serif;
@@ -423,6 +424,14 @@ table.sources { width: 100%; border-collapse: collapse; background: var(--card);
 .toast.out { opacity: 0; transform: translateY(8px); transition: all .4s; }
 .badge-toast { background: var(--accent); color: #fff; font-weight: 700; font-size: 17px; padding: 14px 24px; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(12px); } }
+
+/* ---------- 自己的投稿：編輯、刪除 ---------- */
+.owner-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.owner-actions .mine { font-size: 13px; color: var(--accent); font-weight: 700; margin-right: auto; }
+.owner-actions .act { text-decoration: none; font-size: 13px; }
+.delete-btn.confirm { background: var(--festival); border-color: var(--festival); color: #fff; }
+.editing-banner { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  background: var(--bg); border: 1.5px solid var(--accent); border-radius: 12px; padding: 10px 14px; margin-bottom: 20px; font-size: 15px; }
 
 /* ---------- 可搜尋的國家選單 ---------- */
 .combo { position: relative; }

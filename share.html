@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261113g">
+<link rel="stylesheet" href="style.css?v=20261113i">
 <!-- 先套用深淺色，避免畫面閃一下 -->
 <script>
   try {
@@ -40,8 +40,8 @@
 <main class="page">
   <div class="page-head">
     <div>
-      <h1 data-i18n="nav.share">分享你的日常</h1>
-      <p data-i18n="share.sub">你覺得理所當然的小事，可能是別人眼中的不可思議。寫下來，讓它出現在文化圖鑑裡！</p>
+      <h1 id="page-title" data-i18n="share.full">分享你的日常</h1>
+      <p id="page-sub" data-i18n="share.sub">你覺得理所當然的小事，可能是別人眼中的不可思議。寫下來，讓它出現在文化圖鑑裡！</p>
     </div>
     <span class="mode" id="mode" data-i18n="share.checking">檢查連線中…</span>
   </div>
@@ -49,6 +49,10 @@
   <div class="share-layout">
     <section class="card form-card" id="form-area">
       <form id="share-form" novalidate>
+        <div class="editing-banner" id="editing-banner" hidden>
+          <span>✏️ <b data-i18n="share.editTitle">編輯你的投稿</b></span>
+          <a class="btn ghost" href="share.html" id="cancel-edit" data-i18n="share.cancelEdit">取消編輯</a>
+        </div>
 
         <div class="field">
           <label for="nickname"><span data-i18n="share.nickname">暱稱</span><span class="req">*</span></label>
@@ -107,7 +111,7 @@
           <div class="counter" id="counter">0 / 200</div>
         </div>
 
-        <label class="check field">
+        <label class="check field" id="agree-field">
           <input type="checkbox" name="agree" value="yes" required>
           <span data-i18n="share.agree">我同意將這則內容公開在「文化圖鑑」</span><span class="req">*</span>
         </label>
@@ -132,9 +136,9 @@
 
 <footer class="site-footer" data-i18n="footer">地球人的奇妙日常 · 網頁製作期末專題</footer>
 
-<script src="data.js?v=20261113g"></script>
-<script src="i18n.js?v=20261113g"></script>
-<script src="app.js?v=20261113g"></script>
+<script src="data.js?v=20261113i"></script>
+<script src="i18n.js?v=20261113i"></script>
+<script src="app.js?v=20261113i"></script>
 <script>
 const form = document.getElementById("share-form");
 const preview = document.getElementById("preview");
@@ -272,6 +276,7 @@ function updatePreview() {
 
   const len = form.content.value.length;
   const counter = document.getElementById("counter");
+  if (!counter) return;            // 送出成功後表單已經換成感謝畫面
   counter.textContent = `${len} / 200`;
   counter.classList.toggle("bad", len > 0 && len < 20);
 }
@@ -314,30 +319,37 @@ form.addEventListener("submit", async e => {
   btn.disabled = true;
   btn.textContent = t("share.sending");
   try {
-    const { item, published } = await addSubmission(new FormData(form), mode);
-    if (published) {
-      submissions.unshift(item);
+    if (editingId) {
+      const item = await editSubmission(editingId, new FormData(form));
+      submissions = submissions.map(s => s.id === editingId ? { ...s, ...item } : s);
       renderLatest();
+      showSuccess(item, true, true);
+    } else {
+      const { item, published } = await addSubmission(new FormData(form), mode);
+      if (published) {
+        submissions.unshift(item);
+        renderLatest();
+      }
+      showSuccess(item, published);
     }
-    showSuccess(item, published);
   } catch (ex) {
     showError(ex.message);
     btn.disabled = false;
-    btn.textContent = t("share.submit");
+    btn.textContent = t(editingId ? "share.save" : "share.submit");
   }
 });
 
 let successState = null;
-function showSuccess(item, published) {
-  successState = { item, published };
+function showSuccess(item, published, edited = false) {
+  successState = { item, published, edited };
   document.getElementById("form-area").innerHTML = `
     <div class="success pop">
-      <div class="big-emoji">🎉</div>
-      <h2>${t("share.thanks", { name: escapeHTML(item.nickname) })}</h2>
-      <p>${published ? t("share.published") : t("share.pending")}</p>
+      <div class="big-emoji">${edited ? "✅" : "🎉"}</div>
+      <h2>${t(edited ? "share.updated" : "share.thanks", { name: escapeHTML(item.nickname) })}</h2>
+      <p>${edited ? t("share.updatedText") : published ? t("share.published") : t("share.pending")}</p>
       <div class="card-actions">
         <a class="btn ghost" href="culture.html#community">${t("share.toCulture")}</a>
-        <button class="btn" onclick="location.reload()">${t("share.again")}</button>
+        <a class="btn" href="share.html">${t("share.again")}</a>
       </div>
     </div>`;
 }
@@ -361,7 +373,51 @@ document.addEventListener("langchange", () => {
   renderMode();
   renderLatest();
   if (lastError) showError(lastError);
-  if (successState) showSuccess(successState.item, successState.published);
+  if (successState) showSuccess(successState.item, successState.published, successState.edited);
+  if (editingId && !successState) setEditingText();
+});
+
+/* ===== 編輯模式：網址是 share.html#edit-投稿編號 ===== */
+let editingId = null;
+
+function setEditingText() {
+  document.getElementById("page-title").textContent = t("share.editTitle");
+  document.getElementById("page-sub").textContent = t("share.editSub");
+  document.getElementById("submit-btn").textContent = t("share.save");
+}
+
+function startEdit() {
+  const m = /^#edit-(S\d+)$/.exec(location.hash);
+  if (!m) return;
+  const item = submissions.find(s => s.id === m[1]);
+  if (!item || !isMyPost(item.id)) { showError(t("share.cannotEdit")); return; }
+  editingId = item.id;
+  // 標題、按鈕換成「編輯」的文字；這些元素之後由 JS 控制，不再跟著 data-i18n 換
+  ["page-title", "page-sub", "submit-btn"].forEach(id => delete document.getElementById(id).dataset.i18n);
+  setEditingText();
+  document.getElementById("editing-banner").hidden = false;
+  document.getElementById("agree-field").hidden = true;
+  form.agree.checked = true;
+  // 把原本的內容填回表單
+  form.nickname.value = item.nickname;
+  form.continent.value = item.continent;
+  form.country.value = item.country;
+  form.title.value = item.title;
+  form.content.value = item.content;
+  const cat = form.querySelector(`input[name=category][value="${item.category}"]`);
+  if (cat) cat.checked = true;
+  const emoji = [...form.querySelectorAll("input[name=emoji]")].find(r => r.value === item.emoji);
+  if (emoji) emoji.checked = true;
+  updatePreview();
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+// 已經在分享頁時，點卡片上的「編輯」只會改網址的 #，所以要監聽 hashchange
+window.addEventListener("hashchange", () => { if (location.hash.startsWith("#edit-")) location.reload(); });
+
+// 刪除後，從清單拿掉
+document.addEventListener("submissionremoved", e => {
+  submissions = submissions.filter(s => s.id !== e.detail);
+  renderLatest();
 });
 
 /* ===== 5. 啟動：判斷是存試算表還是存瀏覽器 ===== */
@@ -375,6 +431,7 @@ fetchSubmissions().then(result => {
   delete label.dataset.i18n;     // 之後由 renderMode 控制文字
   renderMode();
   renderLatest();
+  startEdit();
 });
 </script>
 </body>

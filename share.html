@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261113e">
+<link rel="stylesheet" href="style.css?v=20261113f">
 <!-- 先套用深淺色，避免畫面閃一下 -->
 <script>
   try {
@@ -57,8 +57,13 @@
           </div>
           <div class="field">
             <label for="country"><span data-i18n="share.country">國家／地區</span><span class="req">*</span></label>
-            <input type="text" id="country" name="country" required maxlength="30" list="country-list" data-i18n-placeholder="share.countryPh" placeholder="例如：台灣">
-            <datalist id="country-list"></datalist>
+            <!-- 可搜尋的下拉選單（combobox）：打字篩選，也可以直接捲動挑選 -->
+            <div class="combo">
+              <input type="text" id="country" name="country" required maxlength="30" autocomplete="off"
+                role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="country-options"
+                data-i18n-placeholder="share.countryPh" placeholder="例如：台灣">
+              <ul class="combo-list" id="country-options" role="listbox" hidden></ul>
+            </div>
           </div>
         </div>
 
@@ -126,9 +131,9 @@
 
 <footer class="site-footer" data-i18n="footer">地球人的奇妙日常 · 網頁製作期末專題</footer>
 
-<script src="data.js?v=20261113e"></script>
-<script src="i18n.js?v=20261113e"></script>
-<script src="app.js?v=20261113e"></script>
+<script src="data.js?v=20261113f"></script>
+<script src="i18n.js?v=20261113f"></script>
+<script src="app.js?v=20261113f"></script>
 <script>
 const form = document.getElementById("share-form");
 const preview = document.getElementById("preview");
@@ -141,16 +146,102 @@ let lastError = null;    // 記住目前的錯誤，換語言時重新顯示
 /* ===== 1. 產生圖示選項、國家建議清單 ===== */
 document.getElementById("emoji-group").innerHTML = EMOJIS.map((e, i) =>
   `<label><input type="radio" name="emoji" value="${e}" ${i === 0 ? "checked" : ""}><span>${e}</span></label>`).join("");
-function fillCountryList() {
-  document.getElementById("country-list").innerHTML = CODES.map(c => `<option value="${countryName(c)}">`).join("");
+/* ===== 國家選單：可以打字搜尋，也可以直接捲動挑 ===== */
+const countryInput = form.country;
+const optionList = document.getElementById("country-options");
+let activeIndex = -1;     // 鍵盤上下鍵目前停在第幾個
+let shownCodes = [];
+
+// 常見的其他叫法
+const ALIASES = { KR: ["南韓", "大韓民國"], AE: ["阿聯酋", "杜拜"], US: ["美利堅"], GB: ["英格蘭", "蘇格蘭"], CZ: ["捷克共和國"], TW: ["臺灣"] };
+const normalize = text => String(text).trim().toLowerCase().replace(/臺/g, "台");
+
+function findCode(text) {
+  const v = normalize(text);
+  if (!v) return null;
+  return CODES.find(c => normalize(COUNTRIES[c].name) === v || COUNTRIES[c].en.toLowerCase() === v ||
+    (ALIASES[c] || []).some(a => normalize(a) === v)) || null;
 }
 
-// 輸入已收錄的國家時（中英文都可以），自動帶入洲別
-form.country.addEventListener("change", () => {
-  const value = form.country.value.trim().toLowerCase();
-  const code = CODES.find(c => COUNTRIES[c].name === value || COUNTRIES[c].en.toLowerCase() === value);
-  if (code && !form.continent.value) form.continent.value = COUNTRIES[code].continent;
+function openOptions() {
+  const q = normalize(countryInput.value);
+  const hit = c => !q || normalize(COUNTRIES[c].name).includes(q) || COUNTRIES[c].en.toLowerCase().includes(q) ||
+    (ALIASES[c] || []).some(a => normalize(a).includes(q));
+  shownCodes = [];
+  let html = "";
+  // 依洲別分組；英文模式依英文名排序，中文模式照資料順序
+  for (const cont of CONTINENTS) {
+    let codes = CODES.filter(c => COUNTRIES[c].continent === cont && hit(c));
+    if (LANG === "en") codes = codes.sort((a, b) => COUNTRIES[a].en.localeCompare(COUNTRIES[b].en));
+    if (!codes.length) continue;
+    html += `<li class="combo-group" role="presentation">${contName(cont)}</li>`;
+    for (const c of codes) {
+      html += `<li role="option" id="opt-${c}" data-code="${c}" aria-selected="false">
+        <span>${countryName(c)}</span><small>${LANG === "en" ? COUNTRIES[c].name : COUNTRIES[c].en}</small></li>`;
+      shownCodes.push(c);
+    }
+  }
+  optionList.innerHTML = html || `<li class="combo-empty" role="presentation">${t("share.noCountry")}</li>`;
+  optionList.hidden = false;
+  countryInput.setAttribute("aria-expanded", "true");
+  setActive(q && shownCodes.length ? 0 : -1);
+}
+
+function closeOptions() {
+  optionList.hidden = true;
+  countryInput.setAttribute("aria-expanded", "false");
+  countryInput.removeAttribute("aria-activedescendant");
+  activeIndex = -1;
+}
+
+function setActive(i) {
+  activeIndex = i;
+  optionList.querySelectorAll("[role=option]").forEach((li, n) => {
+    li.classList.toggle("active", n === i);
+    li.setAttribute("aria-selected", n === i);
+  });
+  if (i >= 0) {
+    const li = document.getElementById("opt-" + shownCodes[i]);
+    countryInput.setAttribute("aria-activedescendant", li.id);
+    li.scrollIntoView({ block: "nearest" });
+  }
+}
+
+// 選定國家：填入名稱，洲別一定跟著換
+function chooseCountry(code) {
+  countryInput.value = countryName(code);
+  form.continent.value = COUNTRIES[code].continent;
+  closeOptions();
   updatePreview();
+}
+
+countryInput.addEventListener("focus", openOptions);
+countryInput.addEventListener("click", openOptions);
+countryInput.addEventListener("input", openOptions);
+countryInput.addEventListener("keydown", e => {
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    if (optionList.hidden) openOptions();
+    if (!shownCodes.length) return;
+    const step = e.key === "ArrowDown" ? 1 : -1;
+    setActive((activeIndex + step + shownCodes.length) % shownCodes.length);
+  } else if (e.key === "Enter" && !optionList.hidden && activeIndex >= 0) {
+    e.preventDefault();             // 不要直接送出表單
+    chooseCountry(shownCodes[activeIndex]);
+  } else if (e.key === "Escape") {
+    closeOptions();
+  }
+});
+// 用 mousedown 而不是 click：避免輸入框先失去焦點、清單先關掉
+optionList.addEventListener("mousedown", e => {
+  const li = e.target.closest("[role=option]");
+  if (li) { e.preventDefault(); chooseCountry(li.dataset.code); }
+});
+countryInput.addEventListener("blur", () => {
+  setTimeout(closeOptions, 120);
+  // 自己打完整名稱（中英文、常見叫法都可以）也算選到
+  const code = findCode(countryInput.value);
+  if (code) { form.continent.value = COUNTRIES[code].continent; updatePreview(); }
 });
 
 /* ===== 2. 即時預覽與字數 ===== */
@@ -252,7 +343,7 @@ function renderMode() {
 }
 
 document.addEventListener("langchange", () => {
-  fillCountryList();
+  if (!optionList.hidden) openOptions();
   updatePreview();
   renderMode();
   renderLatest();
@@ -261,7 +352,6 @@ document.addEventListener("langchange", () => {
 });
 
 /* ===== 5. 啟動：判斷是存試算表還是存瀏覽器 ===== */
-fillCountryList();
 updatePreview();
 fetchSubmissions().then(result => {
   mode = result.mode;

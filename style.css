@@ -414,6 +414,27 @@ table.sources { width: 100%; border-collapse: collapse; background: var(--card);
 .badge-toast { background: var(--accent); color: #fff; font-weight: 700; font-size: 17px; padding: 14px 24px; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(12px); } }
 
+/* ---------- 可搜尋的國家選單 ---------- */
+.combo { position: relative; }
+.combo-list {
+  position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px);
+  max-height: 280px; overflow-y: auto; margin: 0; padding: 6px 0; list-style: none;
+  background: var(--card); border: 1.5px solid var(--line); border-radius: 12px;
+  box-shadow: 0 10px 28px var(--shadow);
+}
+.combo-list [role=option] {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  padding: 7px 14px; cursor: pointer;
+}
+.combo-list [role=option] small { color: var(--muted); font-size: 12px; }
+.combo-list [role=option]:hover, .combo-list [role=option].active { background: var(--bg); }
+.combo-list [role=option].active { box-shadow: inset 3px 0 0 var(--accent); }
+.combo-group {
+  position: sticky; top: -6px; padding: 6px 14px 4px; font-size: 12px; font-weight: 700;
+  letter-spacing: 1px; color: var(--accent); background: var(--card);
+}
+.combo-empty { padding: 10px 14px; color: var(--muted); font-size: 14px; }
+
 /* ---------- 里程徽章 ---------- */
 .badge-section .section-title { margin-top: 32px; }
 .badges-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }

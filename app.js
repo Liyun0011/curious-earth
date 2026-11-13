@@ -428,13 +428,10 @@ function submissionCard(s, withActions = true) {
       <div class="meta"><span>${escapeHTML(contName(s.continent))}</span><span class="tag ${cat}">${catName(cat)}</span></div>
       <h3>${escapeHTML(s.title)}</h3>
       <p>${escapeHTML(s.content)}</p>
-      <span class="author">— ${escapeHTML(s.nickname)}</span>
-      ${withActions && isMyPost(id) ? `
-        <div class="owner-actions">
-          <span class="mine">✍️ ${t("card.mine")}</span>
-          <a class="act" href="share.html#edit-${escapeHTML(id)}">✏️ ${t("card.edit")}</a>
-          <button type="button" class="act delete-btn" data-id="${escapeHTML(id)}">🗑️ ${t("card.delete")}</button>
-        </div>` : ""}
+      <div class="author-row">
+        ${withActions ? `<a class="edit-link" href="share.html#edit-${escapeHTML(id)}">✏️ ${t("card.edit")}</a>` : ""}
+        <span class="author">— ${escapeHTML(s.nickname)}</span>
+      </div>
       ${withActions ? cardActions(id, {
         tune: cat,
         share: { title: s.title, text: `${s.country}｜${s.title}`, page: "culture.html", hash: "community" }
@@ -455,41 +452,12 @@ document.addEventListener("click", e => {
   const shareBtn = e.target.closest(".share-btn");
   if (shareBtn) { shareLink({ ...shareBtn.dataset }); return; }
 
-  // 刪除自己的投稿：按第一次變成「確定刪除？」，4 秒內再按一次才真的刪
-  const delBtn = e.target.closest(".delete-btn");
-  if (delBtn) { deletePost(delBtn); return; }
-
   // 點卡片其他地方（不是連結或按鈕）也會播放音樂
   const card = e.target.closest("[data-tune]");
   if (card && soundOn && !e.target.closest("a, button, input, select, textarea, label")) {
     playTune(card.dataset.tune, card.querySelector(".play-btn"));
   }
 });
-
-async function deletePost(btn) {
-  if (!btn.classList.contains("confirm")) {
-    btn.classList.add("confirm");
-    btn.textContent = "⚠️ " + t("card.confirmDelete");
-    setTimeout(() => {
-      if (!btn.isConnected || btn.disabled) return;
-      btn.classList.remove("confirm");
-      btn.textContent = "🗑️ " + t("card.delete");
-    }, 4000);
-    return;
-  }
-  btn.disabled = true;
-  const id = btn.dataset.id;
-  try {
-    await hideSubmission(id);
-    btn.closest(".entry")?.remove();
-    toast(t("toast.deleted"));
-    // 讓頁面把這則從自己的清單拿掉
-    document.dispatchEvent(new CustomEvent("submissionremoved", { detail: id }));
-  } catch (err) {
-    btn.disabled = false;
-    toast(t("toast.deleteFail", { msg: err.message }));
-  }
-}
 
 /* ---------- 頁面載入時 ---------- */
 insertControls();

@@ -425,11 +425,13 @@ table.sources { width: 100%; border-collapse: collapse; background: var(--card);
 .badge-toast { background: var(--accent); color: #fff; font-weight: 700; font-size: 17px; padding: 14px 24px; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(12px); } }
 
-/* ---------- 自己的投稿：編輯、刪除 ---------- */
-.owner-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
-.owner-actions .mine { font-size: 13px; color: var(--accent); font-weight: 700; margin-right: auto; }
-.owner-actions .act { text-decoration: none; font-size: 13px; }
-.delete-btn.confirm { background: var(--festival); border-color: var(--festival); color: #fff; }
+/* ---------- 投稿：編輯連結、編輯模式 ---------- */
+.author-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.author-row .author { margin-left: auto; }
+.edit-link { font-size: 13px; color: var(--muted); text-decoration: none; }
+.edit-link:hover { color: var(--accent); text-decoration: underline; }
+.btn.danger { color: var(--festival); border-color: var(--festival); }
+.btn.danger.confirm { background: var(--festival); color: #fff; }
 .editing-banner { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;
   background: var(--bg); border: 1.5px solid var(--accent); border-radius: 12px; padding: 10px 14px; margin-bottom: 20px; font-size: 15px; }
 

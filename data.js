@@ -955,13 +955,13 @@ async function addSubmission(formData, mode) {
     const res = await fetch(SHEET_URL, { method: "POST", body: JSON.stringify(item) });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || "投稿失敗");
-    if (data.token) rememberMyPost(data.item.id, data.token);    // 記住編輯碼，之後才能編輯
     return { item: data.item, published: data.published };
   }
 
   delete item.agree;
+  item.pw = item.password;          // 示範模式：密碼只存在這個瀏覽器裡
+  delete item.password;
   item.id = "S" + Date.now();
-  rememberMyPost(item.id, "local");
   item.created_at = new Date().toISOString().slice(0, 16).replace("T", " ");
   const list = loadLocalSubmissions();
   list.unshift(item);
@@ -970,52 +970,38 @@ async function addSubmission(formData, mode) {
   return { item, published: true };
 }
 
-/* ---------- 編輯、刪除自己的投稿 ----------
-   投稿成功時，後端會給一組「編輯碼」，存在這個瀏覽器的 myPosts 裡；
-   只有拿得出編輯碼的人才能修改。存在瀏覽器的示範投稿，編輯碼記成 "local"。 */
-function loadMyPosts() {
-  try { return JSON.parse(localStorage.getItem("myPosts") || "{}"); }
-  catch (e) { return {}; }
-}
-function rememberMyPost(id, token) {
-  const map = loadMyPosts();
-  map[id] = token;
-  try { localStorage.setItem("myPosts", JSON.stringify(map)); } catch (e) {}
-}
-function isMyPost(id) { return Boolean(loadMyPosts()[id]); }
-
-async function editSubmission(id, formData) {
-  const token = loadMyPosts()[id];
-  if (!token) throw new Error("no permission");
+/* ---------- 編輯、刪除投稿：輸入投稿時設定的「編輯密碼」 ---------- */
+async function editSubmission(id, formData, mode) {
   const fields = Object.fromEntries(formData);
   delete fields.agree;
-  if (token !== "local") {
-    const res = await fetch(SHEET_URL, { method: "POST", body: JSON.stringify({ ...fields, action: "edit", id, token }) });
+  if (mode === "sheet") {
+    const res = await fetch(SHEET_URL, { method: "POST", body: JSON.stringify({ ...fields, action: "edit", id }) });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || "edit failed");
     return data.item;
   }
   const list = loadLocalSubmissions();
   const i = list.findIndex(s => s.id === id);
-  if (i < 0) throw new Error("not found");
+  if (i < 0) throw new Error("找不到這則投稿");
+  if (list[i].pw !== fields.password) throw new Error("密碼不正確");
+  delete fields.password;
   list[i] = { ...list[i], ...fields };
   localStorage.setItem("submissions", JSON.stringify(list));
   return list[i];
 }
 
-async function hideSubmission(id) {
-  const token = loadMyPosts()[id];
-  if (!token) throw new Error("no permission");
-  if (token !== "local") {
-    const res = await fetch(SHEET_URL, { method: "POST", body: JSON.stringify({ action: "hide", id, token }) });
+async function hideSubmission(id, password, mode) {
+  if (mode === "sheet") {
+    const res = await fetch(SHEET_URL, { method: "POST", body: JSON.stringify({ action: "hide", id, password }) });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || "delete failed");
-  } else {
-    localStorage.setItem("submissions", JSON.stringify(loadLocalSubmissions().filter(s => s.id !== id)));
+    return;
   }
-  const map = loadMyPosts();
-  delete map[id];
-  try { localStorage.setItem("myPosts", JSON.stringify(map)); } catch (e) {}
+  const list = loadLocalSubmissions();
+  const item = list.find(s => s.id === id);
+  if (!item) throw new Error("找不到這則投稿");
+  if (item.pw !== password) throw new Error("密碼不正確");
+  localStorage.setItem("submissions", JSON.stringify(list.filter(s => s.id !== id)));
 }
 
 /* =========================================================

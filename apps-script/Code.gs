@@ -5,18 +5,20 @@
 
    GET                     → 回傳「公開」有打勾的投稿（最新 50 則，JSON）
    GET  ?action=reactions  → 回傳每張卡片的「喜歡」「雞蛋」數
-   POST                    → 新增一則投稿，回傳這則的「編輯碼」
-   POST {action:"edit"}    → 用編輯碼修改自己的投稿
-   POST {action:"hide"}    → 用編輯碼刪除（隱藏）自己的投稿
+   POST                    → 新增一則投稿（投稿者自己設定編輯密碼）
+   POST {action:"edit"}    → 用編輯密碼修改投稿
+   POST {action:"hide"}    → 用編輯密碼刪除（隱藏）投稿
    POST {action:"react"}   → 更新某張卡片的「喜歡」「雞蛋」數
    ========================================================= */
 
 const SHEET_NAME = '投稿';
 const REACTION_SHEET = '反應';
 const REACTION_HEADERS = ['卡片 ID', '喜歡', '雞蛋'];
-const HEADERS = ['時間', '暱稱', '國家', '洲別', '分類', '圖示', '標題', '內容', '公開', '編輯碼'];
+const HEADERS = ['時間', '暱稱', '國家', '洲別', '分類', '圖示', '標題', '內容', '公開', '編輯密碼'];
 const PUBLIC_COL = 9;    // 「公開」在第 9 欄（I）
-const TOKEN_COL = 10;    // 「編輯碼」在第 10 欄（J），存的是加密過的值，不是編輯碼本身
+const PASS_COL = 10;     // 「編輯密碼」在第 10 欄（J）：平常存加密後的值。
+                         // 想幫某則投稿設定或重設密碼：直接在 J 欄打上新密碼（明碼），
+                         // 第一次用它編輯成功時，就會自動換成加密後的值。
 const CONTINENTS = ['亞洲', '歐洲', '美洲', '非洲', '大洋洲'];
 const CATEGORIES = ['festival', 'daily', 'trivia'];
 const EMOJIS = ['🌏', '🎉', '🍜', '🏠', '🎵', '🤔', '🐾', '🚲'];
@@ -99,6 +101,8 @@ function validate(data) {
   if (len(item.title) < 2 || len(item.title) > 20) errors.push('標題需為 2～20 字');
   if (len(item.content) < 20 || len(item.content) > 200) errors.push('內容需為 20～200 字');
   if (data.agree !== 'yes') errors.push('請勾選同意公開分享');
+  const pw = String(data.password || '');
+  if (Array.from(pw).length < 4 || Array.from(pw).length > 20) errors.push('編輯密碼需為 4～20 字');
   return { item, errors };
 }
 
@@ -106,50 +110,54 @@ function addPost(data) {
   const { item, errors } = validate(data);
   if (errors.length) return { ok: false, error: errors.join('、') };
 
-  // 編輯碼：隨機產生，只交給投稿的人；試算表只存加密後的值
-  const token = Utilities.getUuid();
   // 同時有很多人投稿時排隊寫入，避免資料互相蓋掉
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     const now = new Date();
     const sheet = getSheet();
-    if (sheet.getRange(1, TOKEN_COL).getValue() === '') sheet.getRange(1, TOKEN_COL).setValue('編輯碼').setFontWeight('bold');
+    sheet.getRange(1, PASS_COL).setValue('編輯密碼').setFontWeight('bold');
+    item.id = 'S' + now.getTime();
     sheet.appendRow([
       now, safe(item.nickname), safe(item.country), item.continent, item.category,
-      item.emoji, safe(item.title), safe(item.content), AUTO_PUBLISH, hash(token)
+      item.emoji, safe(item.title), safe(item.content), AUTO_PUBLISH, passHash(item.id, data.password)
     ]);
     // 「公開」欄做成核取方塊：打勾才會顯示在網站上，取消勾選就隱藏
     sheet.getRange(sheet.getLastRow(), PUBLIC_COL).insertCheckboxes().setValue(AUTO_PUBLISH);
-    item.id = 'S' + now.getTime();
     item.created_at = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy-MM-dd HH:mm');
   } finally {
     lock.releaseLock();
   }
-  return { ok: true, published: AUTO_PUBLISH, item: item, token: token };
+  return { ok: true, published: AUTO_PUBLISH, item: item };
 }
 
-// 找到某則投稿在第幾列，並確認編輯碼正確
-function findOwnRow(sheet, id, token) {
+// 找到某則投稿在第幾列，並確認密碼正確
+function findOwnRow(sheet, id, password) {
   const last = sheet.getLastRow();
-  if (last < 2 || !token) return { error: '找不到這則投稿，或沒有編輯權限' };
-  const rows = sheet.getRange(2, 1, last - 1, TOKEN_COL).getValues();
+  if (last < 2) return { error: '找不到這則投稿' };
+  if (!password) return { error: '請輸入編輯密碼' };
+  const rows = sheet.getRange(2, 1, last - 1, PASS_COL).getValues();
   for (let i = 0; i < rows.length; i++) {
     if ('S' + new Date(rows[i][0]).getTime() !== String(id)) continue;
-    if (!rows[i][TOKEN_COL - 1] || rows[i][TOKEN_COL - 1] !== hash(token)) return { error: '沒有編輯權限' };
+    const stored = String(rows[i][PASS_COL - 1] || '');
+    const isHashed = /^[0-9a-f]{64}$/.test(stored);
+    const ok = stored !== '' && (isHashed ? stored === passHash(id, password) : stored === password);
+    if (!ok) return { error: stored ? '密碼不正確' : '這則投稿沒有設定編輯密碼，請到試算表 J 欄設定' };
+    // 在試算表手動打的明碼，第一次用對之後換成加密後的值
+    if (!isHashed) sheet.getRange(i + 2, PASS_COL).setValue(passHash(id, password));
     return { row: i + 2, values: rows[i] };
   }
-  return { error: '找不到這則投稿，或沒有編輯權限' };
+  return { error: '找不到這則投稿' };
 }
 
 function editPost(data) {
-  const { item, errors } = validate({ ...data, agree: 'yes' });
+  const { item, errors } = validate({ ...data, agree: 'yes', password: '0000' });   // 編輯時不檢查密碼長度，只比對密碼對不對
   if (errors.length) return { ok: false, error: errors.join('、') };
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     const sheet = getSheet();
-    const found = findOwnRow(sheet, data.id, String(data.token || ''));
+    const found = findOwnRow(sheet, data.id, String(data.password || ''));
     if (found.error) return { ok: false, error: found.error };
     // 只改第 2～8 欄（暱稱～內容），時間、公開、編輯碼不動
     sheet.getRange(found.row, 2, 1, 7).setValues([[
@@ -170,7 +178,7 @@ function hidePost(data) {
   lock.waitLock(10000);
   try {
     const sheet = getSheet();
-    const found = findOwnRow(sheet, data.id, String(data.token || ''));
+    const found = findOwnRow(sheet, data.id, String(data.password || ''));
     if (found.error) return { ok: false, error: found.error };
     sheet.getRange(found.row, PUBLIC_COL).setValue(false);
     return { ok: true };
@@ -179,7 +187,12 @@ function hidePost(data) {
   }
 }
 
-// 把編輯碼加密（SHA-256），試算表裡只存這個
+// 密碼加密：把投稿編號一起算進去，同樣的密碼在不同投稿也會變成不同的值
+function passHash(id, password) {
+  return hash('pw:' + id + ':' + password);
+}
+
+// SHA-256
 function hash(text) {
   return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(text), Utilities.Charset.UTF_8)
     .map(b => ('0' + (b & 0xff).toString(16)).slice(-2)).join('');

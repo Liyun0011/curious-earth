@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261113i">
+<link rel="stylesheet" href="style.css?v=20261113j">
 <!-- 先套用深淺色，避免畫面閃一下 -->
 <script>
   try {
@@ -51,7 +51,10 @@
       <form id="share-form" novalidate>
         <div class="editing-banner" id="editing-banner" hidden>
           <span>✏️ <b data-i18n="share.editTitle">編輯你的投稿</b></span>
-          <a class="btn ghost" href="share.html" id="cancel-edit" data-i18n="share.cancelEdit">取消編輯</a>
+          <span>
+            <button type="button" class="btn ghost danger" id="delete-post" data-i18n="share.deletePost">🗑️ 刪除這則投稿</button>
+            <a class="btn ghost" href="share.html" id="cancel-edit" data-i18n="share.cancelEdit">取消編輯</a>
+          </span>
         </div>
 
         <div class="field">
@@ -111,6 +114,11 @@
           <div class="counter" id="counter">0 / 200</div>
         </div>
 
+        <div class="field">
+          <label for="password"><span id="pw-label" data-i18n="share.password">編輯密碼</span><span class="req">*</span><span class="hint" id="pw-hint" data-i18n="share.passwordHint">4～20 字，之後用來編輯或刪除這則投稿，請記下來</span></label>
+          <input type="password" id="password" name="password" required minlength="4" maxlength="20" autocomplete="new-password">
+        </div>
+
         <label class="check field" id="agree-field">
           <input type="checkbox" name="agree" value="yes" required>
           <span data-i18n="share.agree">我同意將這則內容公開在「文化圖鑑」</span><span class="req">*</span>
@@ -136,9 +144,9 @@
 
 <footer class="site-footer" data-i18n="footer">地球人的奇妙日常 · 網頁製作期末專題</footer>
 
-<script src="data.js?v=20261113i"></script>
-<script src="i18n.js?v=20261113i"></script>
-<script src="app.js?v=20261113i"></script>
+<script src="data.js?v=20261113j"></script>
+<script src="i18n.js?v=20261113j"></script>
+<script src="app.js?v=20261113j"></script>
 <script>
 const form = document.getElementById("share-form");
 const preview = document.getElementById("preview");
@@ -294,6 +302,8 @@ function firstError() {
   if (!form.country.value.trim()) return ["country", "err.country"];
   if (form.title.value.trim().length < 2) return ["title", "err.title"];
   if (form.content.value.trim().length < 20) return ["content", "err.content", { n: form.content.value.trim().length }];
+  const pw = form.password.value;
+  if (editingId ? !pw : (pw.length < 4 || pw.length > 20)) return ["password", editingId ? "err.passwordEdit" : "err.password"];
   if (!form.agree.checked) return ["agree", "err.agree"];
   return null;
 }
@@ -320,7 +330,7 @@ form.addEventListener("submit", async e => {
   btn.textContent = t("share.sending");
   try {
     if (editingId) {
-      const item = await editSubmission(editingId, new FormData(form));
+      const item = await editSubmission(editingId, new FormData(form), mode);
       submissions = submissions.map(s => s.id === editingId ? { ...s, ...item } : s);
       renderLatest();
       showSuccess(item, true, true);
@@ -384,16 +394,19 @@ function setEditingText() {
   document.getElementById("page-title").textContent = t("share.editTitle");
   document.getElementById("page-sub").textContent = t("share.editSub");
   document.getElementById("submit-btn").textContent = t("share.save");
+  document.getElementById("pw-label").textContent = t("share.passwordEdit");
+  document.getElementById("pw-hint").textContent = t("share.passwordEditHint");
 }
 
 function startEdit() {
   const m = /^#edit-(S\d+)$/.exec(location.hash);
   if (!m) return;
   const item = submissions.find(s => s.id === m[1]);
-  if (!item || !isMyPost(item.id)) { showError(t("share.cannotEdit")); return; }
+  if (!item) { showError(t("share.cannotEdit")); return; }
   editingId = item.id;
   // 標題、按鈕換成「編輯」的文字；這些元素之後由 JS 控制，不再跟著 data-i18n 換
-  ["page-title", "page-sub", "submit-btn"].forEach(id => delete document.getElementById(id).dataset.i18n);
+  ["page-title", "page-sub", "submit-btn", "pw-label", "pw-hint"].forEach(id => delete document.getElementById(id).dataset.i18n);
+  form.password.autocomplete = "current-password";
   setEditingText();
   document.getElementById("editing-banner").hidden = false;
   document.getElementById("agree-field").hidden = true;
@@ -411,14 +424,38 @@ function startEdit() {
   updatePreview();
   form.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
+// 刪除：按第一次變成「確定刪除？」，4 秒內再按一次才真的刪
+document.getElementById("delete-post").onclick = async e => {
+  const btn = e.currentTarget;
+  if (!form.password.value) { showError(["password", "err.passwordEdit"]); form.password.focus(); return; }
+  if (!btn.classList.contains("confirm")) {
+    btn.classList.add("confirm");
+    btn.textContent = t("share.confirmDelete");
+    setTimeout(() => { if (!btn.disabled) { btn.classList.remove("confirm"); btn.textContent = t("share.deletePost"); } }, 4000);
+    return;
+  }
+  btn.disabled = true;
+  try {
+    await hideSubmission(editingId, form.password.value, mode);
+    submissions = submissions.filter(s => s.id !== editingId);
+    renderLatest();
+    document.getElementById("form-area").innerHTML = `
+      <div class="success pop">
+        <div class="big-emoji">🗑️</div>
+        <h2>${t("share.deleted")}</h2>
+        <p>${t("share.deletedText")}</p>
+        <div class="card-actions"><a class="btn" href="share.html">${t("share.again")}</a></div>
+      </div>`;
+  } catch (ex) {
+    btn.disabled = false;
+    btn.classList.remove("confirm");
+    btn.textContent = t("share.deletePost");
+    showError(ex.message);
+  }
+};
 // 已經在分享頁時，點卡片上的「編輯」只會改網址的 #，所以要監聽 hashchange
 window.addEventListener("hashchange", () => { if (location.hash.startsWith("#edit-")) location.reload(); });
-
-// 刪除後，從清單拿掉
-document.addEventListener("submissionremoved", e => {
-  submissions = submissions.filter(s => s.id !== e.detail);
-  renderLatest();
-});
 
 /* ===== 5. 啟動：判斷是存試算表還是存瀏覽器 ===== */
 updatePreview();

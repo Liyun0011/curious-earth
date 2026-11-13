@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261113f">
+<link rel="stylesheet" href="style.css?v=20261113g">
 <!-- 先套用深淺色，避免畫面閃一下 -->
 <script>
   try {
@@ -50,10 +50,24 @@
     <section class="card form-card" id="form-area">
       <form id="share-form" novalidate>
 
-        <div class="row">
+        <div class="field">
+          <label for="nickname"><span data-i18n="share.nickname">暱稱</span><span class="req">*</span></label>
+          <input type="text" id="nickname" name="nickname" required maxlength="20" data-i18n-placeholder="share.nicknamePh" placeholder="例如：台科小資">
+        </div>
+
+        <!-- 先選洲別，國家清單就只列那一洲 -->
+        <div class="row row-cont">
           <div class="field">
-            <label for="nickname"><span data-i18n="share.nickname">暱稱</span><span class="req">*</span></label>
-            <input type="text" id="nickname" name="nickname" required maxlength="20" data-i18n-placeholder="share.nicknamePh" placeholder="例如：台科小資">
+            <label for="continent"><span data-i18n="culture.continent">洲別</span><span class="req">*</span></label>
+            <!-- value 固定用中文，因為後端用中文檢查；畫面上顯示的文字會跟著語言切換 -->
+            <select id="continent" name="continent" required>
+              <option value="" data-i18n="share.choose">請選擇</option>
+              <option value="亞洲" data-i18n="cont.asia">亞洲</option>
+              <option value="歐洲" data-i18n="cont.europe">歐洲</option>
+              <option value="美洲" data-i18n="cont.americas">美洲</option>
+              <option value="非洲" data-i18n="cont.africa">非洲</option>
+              <option value="大洋洲" data-i18n="cont.oceania">大洋洲</option>
+            </select>
           </div>
           <div class="field">
             <label for="country"><span data-i18n="share.country">國家／地區</span><span class="req">*</span></label>
@@ -65,19 +79,6 @@
               <ul class="combo-list" id="country-options" role="listbox" hidden></ul>
             </div>
           </div>
-        </div>
-
-        <div class="field">
-          <label for="continent"><span data-i18n="culture.continent">洲別</span><span class="req">*</span></label>
-          <!-- value 固定用中文，因為後端用中文檢查；畫面上顯示的文字會跟著語言切換 -->
-          <select id="continent" name="continent" required>
-            <option value="" data-i18n="share.choose">請選擇</option>
-            <option value="亞洲" data-i18n="cont.asia">亞洲</option>
-            <option value="歐洲" data-i18n="cont.europe">歐洲</option>
-            <option value="美洲" data-i18n="cont.americas">美洲</option>
-            <option value="非洲" data-i18n="cont.africa">非洲</option>
-            <option value="大洋洲" data-i18n="cont.oceania">大洋洲</option>
-          </select>
         </div>
 
         <fieldset class="field">
@@ -131,9 +132,9 @@
 
 <footer class="site-footer" data-i18n="footer">地球人的奇妙日常 · 網頁製作期末專題</footer>
 
-<script src="data.js?v=20261113f"></script>
-<script src="i18n.js?v=20261113f"></script>
-<script src="app.js?v=20261113f"></script>
+<script src="data.js?v=20261113g"></script>
+<script src="i18n.js?v=20261113g"></script>
+<script src="app.js?v=20261113g"></script>
 <script>
 const form = document.getElementById("share-form");
 const preview = document.getElementById("preview");
@@ -169,8 +170,12 @@ function openOptions() {
     (ALIASES[c] || []).some(a => normalize(a).includes(q));
   shownCodes = [];
   let html = "";
+  // 有選洲別就只列那一洲；那一洲搜尋不到時，改從全部國家找
+  const chosen = form.continent.value;
+  let continents = chosen ? [chosen] : CONTINENTS;
+  if (chosen && q && !CODES.some(c => COUNTRIES[c].continent === chosen && hit(c))) continents = CONTINENTS;
   // 依洲別分組；英文模式依英文名排序，中文模式照資料順序
-  for (const cont of CONTINENTS) {
+  for (const cont of continents) {
     let codes = CODES.filter(c => COUNTRIES[c].continent === cont && hit(c));
     if (LANG === "en") codes = codes.sort((a, b) => COUNTRIES[a].en.localeCompare(COUNTRIES[b].en));
     if (!codes.length) continue;
@@ -214,6 +219,14 @@ function chooseCountry(code) {
   closeOptions();
   updatePreview();
 }
+
+// 換洲別時：已選的國家如果不在這一洲，就清掉；清單打開中就重新整理
+form.continent.addEventListener("change", () => {
+  const code = findCode(countryInput.value);
+  if (code && COUNTRIES[code].continent !== form.continent.value) countryInput.value = "";
+  if (!optionList.hidden) openOptions();
+  updatePreview();
+});
 
 countryInput.addEventListener("focus", openOptions);
 countryInput.addEventListener("click", openOptions);
@@ -272,8 +285,8 @@ form.addEventListener("reset", () => setTimeout(() => {
 /* ===== 3. 驗證錯誤訊息 ===== */
 function firstError() {
   if (!form.nickname.value.trim()) return ["nickname", "err.nickname"];
-  if (!form.country.value.trim()) return ["country", "err.country"];
   if (!form.continent.value) return ["continent", "err.continent"];
+  if (!form.country.value.trim()) return ["country", "err.country"];
   if (form.title.value.trim().length < 2) return ["title", "err.title"];
   if (form.content.value.trim().length < 20) return ["content", "err.content", { n: form.content.value.trim().length }];
   if (!form.agree.checked) return ["agree", "err.agree"];

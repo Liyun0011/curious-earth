@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261113f">
+<link rel="stylesheet" href="style.css?v=20261113g">
 <!-- 先套用深淺色，避免畫面閃一下 -->
 <script>
   try {
@@ -105,9 +105,9 @@
   window.jsVectorMap = { addMap: function (name, data) { window.__maps[name] = data; } };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/jsvectormap@1.5.3/dist/maps/world.js"></script>
-<script src="data.js?v=20261113f"></script>
-<script src="i18n.js?v=20261113f"></script>
-<script src="app.js?v=20261113f"></script>
+<script src="data.js?v=20261113g"></script>
+<script src="i18n.js?v=20261113g"></script>
+<script src="app.js?v=20261113g"></script>
 
 <script>
 const explored = loadExplored();
@@ -161,6 +161,7 @@ function drawMap() {
 
   // 圓點：太小不好點的國家，以及地圖上根本沒畫出來的國家
   const toXY = makeProjection(landLayer);
+  projectLatLon = toXY;
   const pins = [];
   for (const code of CODES) {
     const path = landLayer.querySelector(`[data-code="${code}"]`);
@@ -186,6 +187,9 @@ function drawMap() {
     pin.tx = pin.x; pin.ty = pin.y;     // 真正的位置（推開之前）
   }
   pinData = pins;
+  flyLayer = document.createElementNS(NS, "g");
+  flyLayer.setAttribute("class", "fly-layer");
+  svg.appendChild(flyLayer);
   setupZoom(data);
 
   svg.addEventListener("click", e => {
@@ -216,6 +220,112 @@ function drawMap() {
 
   updateLabels();
   refresh();
+}
+
+/* ===== 飛行動畫：✈️ 從上一個國家沿著弧線飛到下一個國家，抵達時冒出那則小知識的圖示 ===== */
+let projectLatLon = null;
+let flyLayer = null;
+let lastCode = null;
+let flightId = 0;
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// 國家在地圖上的位置：用經緯度換算（比用形狀的外框中心準，例如美國不會被阿拉斯加拉歪）
+function countryPoint(code) {
+  const c = COUNTRIES[code];
+  if (projectLatLon && c) return projectLatLon(c.lat, c.lon);
+  const path = svg.querySelector(`path[data-code="${code}"]`);
+  if (!path) return null;
+  const b = path.getBBox();
+  return [b.x + b.width / 2, b.y + b.height / 2];
+}
+
+const ease = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;   // 慢－快－慢
+
+function travel(fromCode, toCode, emoji) {
+  const to = countryPoint(toCode);
+  if (!to || !flyLayer) return;
+  const id = ++flightId;               // 飛到一半又點別的國家，就取消上一趟
+  flyLayer.innerHTML = "";
+  const from = fromCode && fromCode !== toCode ? countryPoint(fromCode) : null;
+  if (!from || reduceMotion) { arrive(to, emoji, id); return; }
+
+  // 弧線：起點和終點中間往上拱，距離越遠拱越高
+  const dx = to[0] - from[0], dy = to[1] - from[1];
+  const dist = Math.hypot(dx, dy);
+  const ctrl = [(from[0] + to[0]) / 2 + dy * 0.25, (from[1] + to[1]) / 2 - Math.abs(dx) * 0.25 - dist * 0.1];
+  const route = document.createElementNS(NS, "path");
+  route.setAttribute("d", `M${from[0]},${from[1]} Q${ctrl[0]},${ctrl[1]} ${to[0]},${to[1]}`);
+  route.setAttribute("class", "fly-route");
+  const plane = document.createElementNS(NS, "text");
+  plane.setAttribute("class", "fly-plane");
+  plane.textContent = "✈️";
+  flyLayer.append(route, plane);
+  const length = route.getTotalLength();
+  const duration = Math.min(2200, Math.max(900, 700 + dist * 2));
+
+  // 地圖有放大的話，鏡頭跟著平移到目的地
+  const camFrom = { x: view.x, y: view.y };
+  const camTo = { x: to[0] - view.w / 2, y: to[1] - view.h / 2 };
+  const followCamera = zoomLevel() > 1.01;
+
+  const t0 = performance.now();
+  function frame(now) {
+    if (id !== flightId) return;
+    const t = Math.min(1, (now - t0) / duration);
+    const e = ease(t);
+    const k = view.w / full.w;                    // 讓飛機在螢幕上維持一樣大
+    const p = route.getPointAtLength(length * e);
+    const p2 = route.getPointAtLength(Math.min(length, length * e + 0.5));
+    const angle = Math.atan2(p2.y - p.y, p2.x - p.x) * 180 / Math.PI;
+    plane.setAttribute("font-size", 16 * k);
+    // ✈️ 圖示本身是朝右上 45° 的，所以要多轉 45° 才會對準飛行方向
+    plane.setAttribute("transform", `translate(${p.x},${p.y}) rotate(${angle + 45})`);
+    route.style.strokeWidth = 1.2 * k;
+    route.style.strokeDasharray = `${length * e} ${length}`;    // 航線跟著飛機畫出來
+    if (followCamera) {
+      view.x = camFrom.x + (camTo.x - camFrom.x) * e;
+      view.y = camFrom.y + (camTo.y - camFrom.y) * e;
+      applyView();
+    }
+    if (t < 1) requestAnimationFrame(frame);
+    else {
+      plane.remove();
+      route.classList.add("fade");
+      arrive(to, emoji, id);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+// 抵達：一圈漣漪＋那則小知識的圖示跳出來再飄走
+function arrive([x, y], emoji, id) {
+  const ring = document.createElementNS(NS, "circle");
+  ring.setAttribute("class", "fly-ring");
+  ring.setAttribute("cx", x); ring.setAttribute("cy", y);
+  const icon = document.createElementNS(NS, "text");
+  icon.setAttribute("class", "fly-icon");
+  icon.textContent = emoji;
+  flyLayer.append(ring, icon);
+  const t0 = performance.now();
+  const duration = reduceMotion ? 600 : 1600;
+  function frame(now) {
+    if (id !== flightId) return;
+    const t = Math.min(1, (now - t0) / duration);
+    const k = view.w / full.w;
+    ring.setAttribute("r", (4 + 22 * Math.min(1, t * 1.6)) * k);
+    ring.style.strokeWidth = 1.5 * k;
+    ring.style.opacity = Math.max(0, 1 - t * 1.6);
+    // 圖示：先彈大，再慢慢往上飄、變透明
+    const pop = t < 0.2 ? t / 0.2 * 1.35 : t < 0.32 ? 1.35 - (t - 0.2) / 0.12 * 0.35 : 1;
+    const lift = t > 0.45 ? (t - 0.45) / 0.55 * 14 : 0;
+    icon.setAttribute("font-size", 22 * k * pop);
+    icon.setAttribute("x", x);
+    icon.setAttribute("y", y - (12 + lift) * k);
+    icon.style.opacity = t > 0.6 ? 1 - (t - 0.6) / 0.4 : 1;
+    if (t < 1) requestAnimationFrame(frame);
+    else flyLayer.innerHTML = "";
+  }
+  requestAnimationFrame(frame);
 }
 
 /* ===== 縮放與拖曳 =====
@@ -412,6 +522,8 @@ function updateLabels() {
 /* ===== 選擇國家 → 顯示小知識卡片 ===== */
 // byUser：使用者自己點的才播音樂（瀏覽器不允許網頁自動發出聲音）
 function select(code, index = 0, byUser = false) {
+  const from = current || lastCode;
+  lastCode = code;
   current = code;
   factIndex = index;
   if (!explored.has(code)) {
@@ -422,6 +534,7 @@ function select(code, index = 0, byUser = false) {
   renderCountry();
   refresh();
   if (byUser && soundOn) playTune(tuneKey(FACTS_BY_CODE[code][factIndex]), card.querySelector(".play-btn"));
+  if (byUser && mapLoaded) travel(from, code, FACTS_BY_CODE[code][factIndex].emoji);
 }
 
 function renderCountry() {

@@ -142,6 +142,7 @@ const COUNTRIES = {
   AG: { name: "安地卡及巴布達", en: "Antigua and Barbuda", continent: "美洲", lat: 17.06, lon: -61.8 },
   DM: { name: "多米尼克", en: "Dominica", continent: "美洲", lat: 15.41, lon: -61.37 },
   KN: { name: "聖克里斯多福及尼維斯", en: "Saint Kitts and Nevis", continent: "美洲", lat: 17.36, lon: -62.78 },
+  GL: { name: "格陵蘭", en: "Greenland", continent: "美洲", lat: 72.0, lon: -40.0 },   // 丹麥的自治領土
   ET: { name: "衣索比亞", en: "Ethiopia", continent: "非洲", lat: 9.1, lon: 40.5 },
   GH: { name: "迦納", en: "Ghana", continent: "非洲", lat: 7.9, lon: -1.0 },
   MA: { name: "摩洛哥", en: "Morocco", continent: "非洲", lat: 31.8, lon: -7.1 },
@@ -625,6 +626,9 @@ const FACTS = [
   { id: "KN", code: "KN", cat: "trivia", emoji: "📏",
     title: "西半球最小的國家", fact: "西半球面積和人口都最小的國家。",
     en: { title: "Smallest in the Western Hemisphere", fact: "Saint Kitts and Nevis is the smallest country in the Western Hemisphere by both area and population." } },
+  { id: "GL", code: "GL", cat: "trivia", emoji: "🧊",
+    title: "叫綠地卻幾乎都是冰", fact: "格陵蘭的名字意思是「綠色的土地」，但其實大約八成的土地被冰層覆蓋。據說是維京人「紅鬍子艾瑞克」故意取了好聽的名字，吸引大家移居過來。",
+    en: { title: "A green land that's mostly ice", fact: "Greenland's name means \"green land\", yet about 80% of it is covered by ice. Legend says Viking explorer Erik the Red picked the attractive name on purpose to lure settlers." } },
   { id: "ET", code: "ET", cat: "trivia", emoji: "📅",
     title: "一年有 13 個月", fact: "衣索比亞使用自己的曆法：12 個月每月 30 天，再加上只有 5 或 6 天的第 13 個月。", bonus: "他們的年份比我們常用的西元曆晚了 7 到 8 年。",
     en: { title: "Thirteen months a year", fact: "Ethiopia uses its own calendar: twelve months of 30 days, plus a thirteenth month of just 5 or 6 days.", bonus: "Its year count runs about 7 to 8 years behind the Gregorian calendar." } },

@@ -30,6 +30,15 @@ function countryName(code) {
   return c ? (LANG === "en" ? c.en : c.name) : code;
 }
 
+// 地圖上沒收錄的地區，用瀏覽器內建的 Intl.DisplayNames 翻成目前語言；不支援時用地圖檔裡的英文名
+function regionName(code, fallback) {
+  try {
+    const name = new Intl.DisplayNames([LANG === "en" ? "en" : "zh-Hant-TW"], { type: "region" }).of(code);
+    if (name && name !== code) return name;
+  } catch (e) {}
+  return fallback || code;
+}
+
 // 取得一則小知識在目前語言的內容，順便帶上國名和洲別
 function F(f) {
   const text = LANG === "en" ? f.en : f;

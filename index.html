@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>探索地圖｜地球人的奇妙日常</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="index.html">
+      <span class="logo" aria-hidden="true"></span>
+      <span>
+        <span class="brand-name">地球人的奇妙日常</span>
+        <span class="brand-en">CURIOUS EARTH CLUB</span>
+      </span>
+    </a>
+    <nav class="site-nav" aria-label="主選單">
+      <a href="index.html" class="active" aria-current="page">探索地圖</a>
+      <a href="culture.html">文化圖鑑</a>
+      <a href="quiz.html">猜猜在哪國 ↗</a>
+      <a href="share.html">分享你的日常</a>
+      <a href="about.html">關於我們</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="rings" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+  <div class="inner">
+    <p class="eyebrow">CURIOUS EARTH CLUB</p>
+    <h1>你的日常，<br>是別人眼中的<em>不可思議</em>。</h1>
+    <p class="lead">台灣的垃圾車會唱歌、芬蘭有背老婆大賽、衣索比亞一年有 13 個月。點開世界地圖，看看地球人各種意想不到的日常。</p>
+    <div class="hero-actions">
+      <a class="btn" href="#explore">開始探索 ↓</a>
+      <a class="btn ghost" href="share.html">分享你的日常</a>
+    </div>
+    <div class="stats">
+      <div><strong id="stat-countries">18</strong>個國家</div>
+      <div><strong>5</strong>大洲</div>
+      <div><strong>3</strong>種分類</div>
+    </div>
+  </div>
+</section>
+
+<main class="page" id="explore">
+  <div class="page-head">
+    <div>
+      <h1>點開地圖，出發吧！</h1>
+      <p>有顏色的國家都藏著一則意想不到的日常，點點看。</p>
+    </div>
+    <div class="progress" aria-live="polite">
+      <div class="progress-label">已探索 <strong id="count">0</strong> / <span id="total">0</span> 個國家</div>
+      <div class="bar"><span id="bar"></span></div>
+    </div>
+  </div>
+
+  <div class="toolbar" role="group" aria-label="分類篩選">
+    <button class="chip" data-filter="all" aria-pressed="true">全部</button>
+    <button class="chip" data-filter="festival" aria-pressed="false"><span class="dot" style="background:var(--festival)"></span>節慶</button>
+    <button class="chip" data-filter="daily" aria-pressed="false"><span class="dot" style="background:var(--daily)"></span>生活日常</button>
+    <button class="chip" data-filter="trivia" aria-pressed="false"><span class="dot" style="background:var(--trivia)"></span>冷知識</button>
+    <span class="spacer"></span>
+    <button class="btn" id="random">🎲 隨機探索</button>
+  </div>
+
+  <div class="map-layout">
+    <section class="map-wrap" aria-label="互動世界地圖">
+      <svg id="map" role="img" aria-label="世界地圖，有顏色的國家可以點擊"></svg>
+      <div class="tooltip" id="tooltip"></div>
+      <div class="map-status" id="status">地圖載入中…</div>
+    </section>
+    <aside class="card side" id="card" aria-live="polite"></aside>
+  </div>
+</main>
+
+<footer class="site-footer">地球人的奇妙日常 · 網頁製作期末專題 · 地圖資料：jsvectormap（MIT 授權）</footer>
+
+<!-- 先準備好接收地圖資料的函式，再載入地圖資料檔 -->
+<script>
+  window.__maps = {};
+  window.jsVectorMap = { addMap: function (name, data) { window.__maps[name] = data; } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/jsvectormap@1.5.3/dist/maps/world.js"></script>
+<script src="data.js"></script>
+
+<script>
+const explored = loadExplored();
+let current = null;
+let filter = "all";
+
+const svg = document.getElementById("map");
+const tooltip = document.getElementById("tooltip");
+const card = document.getElementById("card");
+const NS = "http://www.w3.org/2000/svg";
+
+/* ===== 畫地圖 ===== */
+function drawMap() {
+  const data = Object.values(window.__maps)[0];
+  const status = document.getElementById("status");
+  if (!data || !data.paths) {
+    status.textContent = "地圖資料載入失敗，請確認網路連線後重新整理。";
+    return;
+  }
+  status.remove();
+  svg.parentElement.classList.add("loaded");
+  svg.setAttribute("viewBox", `0 0 ${data.width} ${data.height}`);
+
+  const landLayer = document.createElementNS(NS, "g");
+  const pinLayer = document.createElementNS(NS, "g");
+  svg.append(landLayer, pinLayer);
+
+  for (const [code, info] of Object.entries(data.paths)) {
+    const path = document.createElementNS(NS, "path");
+    path.setAttribute("d", info.path);
+    path.setAttribute("class", "land");
+    path.dataset.code = code;
+    path.dataset.en = info.name;
+    const c = COUNTRIES[code];
+    if (c) {
+      path.classList.add("featured", c.cat);
+      path.setAttribute("tabindex", "0");
+      path.setAttribute("role", "button");
+      path.setAttribute("aria-label", c.name + "：" + c.title);
+    }
+    landLayer.appendChild(path);
+  }
+
+  // 小國家不好點，所以在每個收錄國家的中心加一個圓點
+  const css = getComputedStyle(document.documentElement);
+  for (const code of CODES) {
+    const path = landLayer.querySelector(`[data-code="${code}"]`);
+    if (!path) continue;
+    const b = path.getBBox();
+    const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+    const color = css.getPropertyValue("--" + COUNTRIES[code].cat);
+    const g = document.createElementNS(NS, "g");
+    g.setAttribute("class", "pin");
+    g.dataset.code = code;
+    g.innerHTML =
+      `<circle class="pulse" cx="${cx}" cy="${cy}" r="4" stroke="${color}"/>` +
+      `<circle class="core" cx="${cx}" cy="${cy}" r="4" fill="${color}"/>`;
+    pinLayer.appendChild(g);
+  }
+
+  svg.addEventListener("click", e => {
+    const code = e.target.closest("[data-code]")?.dataset.code;
+    if (COUNTRIES[code]) select(code);
+  });
+  svg.addEventListener("keydown", e => {
+    if ((e.key === "Enter" || e.key === " ") && COUNTRIES[e.target.dataset.code]) {
+      e.preventDefault();
+      select(e.target.dataset.code);
+    }
+  });
+  svg.addEventListener("mousemove", e => {
+    const el = e.target.closest("[data-code]");
+    if (!el) { tooltip.classList.remove("show"); return; }
+    const c = COUNTRIES[el.dataset.code];
+    const en = svg.querySelector(`path[data-code="${el.dataset.code}"]`)?.dataset.en || "";
+    tooltip.innerHTML = c ? `${c.emoji} ${c.name}` : `${en}<small>尚未收錄</small>`;
+    const r = svg.parentElement.getBoundingClientRect();
+    tooltip.style.left = (e.clientX - r.left) + "px";
+    tooltip.style.top = (e.clientY - r.top) + "px";
+    tooltip.classList.add("show");
+  });
+  svg.addEventListener("mouseleave", () => tooltip.classList.remove("show"));
+
+  refresh();
+}
+
+/* ===== 選擇國家 → 顯示小知識卡片 ===== */
+function select(code) {
+  current = code;
+  explored.add(code);
+  saveExplored(explored);
+  const c = COUNTRIES[code];
+  card.innerHTML = `
+    <div class="pop">
+      <div class="big-emoji">${c.emoji}</div>
+      <h2>${c.name}</h2>
+      <div class="meta"><span>${c.continent}</span><span class="tag ${c.cat}">${CATEGORIES[c.cat]}</span></div>
+      <h3>${c.title}</h3>
+      <p>${c.fact}</p>
+      <div class="bonus"><b>💡 你知道嗎？</b>${c.bonus}</div>
+      <div class="card-actions">
+        <button class="btn ghost" id="back">← 國家列表</button>
+        <button class="btn" id="next">下一個 🎲</button>
+      </div>
+    </div>`;
+  document.getElementById("back").onclick = () => { current = null; renderIntro(); refresh(); };
+  document.getElementById("next").onclick = randomPick;
+  refresh();
+}
+
+function renderIntro() {
+  card.innerHTML = `
+    <div class="pop">
+      <div class="big-emoji">🧭</div>
+      <h2>從哪裡出發？</h2>
+      <p>點地圖上<b>有顏色的國家</b>或閃爍的圓點。顏色變深，代表你已經探索過了。</p>
+      <div class="pick-list">${CODES.filter(visible).map(code =>
+        `<button data-pick="${code}" class="${explored.has(code) ? "explored" : ""}">${COUNTRIES[code].name}</button>`
+      ).join("")}</div>
+    </div>`;
+  card.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => select(b.dataset.pick));
+}
+
+/* ===== 篩選、隨機、進度 ===== */
+function visible(code) { return filter === "all" || COUNTRIES[code].cat === filter; }
+
+function randomPick() {
+  const pool = CODES.filter(c => visible(c) && c !== current);
+  const unexplored = pool.filter(c => !explored.has(c));
+  const list = unexplored.length ? unexplored : pool;
+  select(list[Math.floor(Math.random() * list.length)]);
+}
+
+function refresh() {
+  svg.querySelectorAll("path.featured").forEach(p => {
+    const code = p.dataset.code;
+    p.classList.toggle("explored", explored.has(code));
+    p.classList.toggle("active", code === current);
+    p.classList.toggle("dim", !visible(code));
+  });
+  svg.querySelectorAll(".pin").forEach(g => {
+    g.classList.toggle("explored", explored.has(g.dataset.code));
+    g.classList.toggle("hidden", !visible(g.dataset.code));
+  });
+  document.getElementById("count").textContent = explored.size;
+  document.getElementById("total").textContent = CODES.length;
+  document.getElementById("bar").style.width = (explored.size / CODES.length * 100) + "%";
+}
+
+document.querySelectorAll(".chip").forEach(chip => {
+  chip.onclick = () => {
+    filter = chip.dataset.filter;
+    document.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === chip));
+    if (!current) renderIntro();
+    refresh();
+  };
+});
+document.getElementById("random").onclick = randomPick;
+
+renderIntro();
+drawMap();
+
+document.getElementById("stat-countries").textContent = CODES.length;
+
+// 從文化圖鑑點「在地圖上看」過來時，網址會帶 #國家代碼，例如 index.html#TW
+const fromHash = location.hash.slice(1);
+if (COUNTRIES[fromHash]) {
+  select(fromHash);
+  document.getElementById("explore").scrollIntoView();
+}
+</script>
+</body>
+</html>

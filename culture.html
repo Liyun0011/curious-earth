@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>文化圖鑑｜地球人的奇妙日常</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="index.html">
+      <span class="logo" aria-hidden="true"></span>
+      <span>
+        <span class="brand-name">地球人的奇妙日常</span>
+        <span class="brand-en">CURIOUS EARTH CLUB</span>
+      </span>
+    </a>
+    <nav class="site-nav" aria-label="主選單">
+      <a href="index.html">探索地圖</a>
+      <a href="culture.html" class="active" aria-current="page">文化圖鑑</a>
+      <a href="quiz.html">猜猜在哪國 ↗</a>
+      <a href="share.html">分享你的日常</a>
+      <a href="about.html">關於我們</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <div class="page-head">
+    <div>
+      <h1>文化圖鑑</h1>
+      <p>收集全世界的奇妙日常，看看你已經解鎖了幾張。</p>
+    </div>
+    <div class="progress">
+      <div class="progress-label">已收集 <strong id="count">0</strong> / <span id="total">0</span> 張</div>
+      <div class="bar"><span id="bar"></span></div>
+    </div>
+  </div>
+
+  <div class="toolbar" role="group" aria-label="篩選">
+    <button class="chip" data-filter="all" aria-pressed="true">全部</button>
+    <button class="chip" data-filter="festival" aria-pressed="false"><span class="dot" style="background:var(--festival)"></span>節慶</button>
+    <button class="chip" data-filter="daily" aria-pressed="false"><span class="dot" style="background:var(--daily)"></span>生活日常</button>
+    <button class="chip" data-filter="trivia" aria-pressed="false"><span class="dot" style="background:var(--trivia)"></span>冷知識</button>
+    <button class="chip" data-filter="community" aria-pressed="false">✍️ 訪客投稿 <span id="community-count"></span></button>
+    <span class="spacer"></span>
+    <label>洲別
+      <select id="continent">
+        <option value="all">全部</option>
+        <option>亞洲</option><option>歐洲</option><option>美洲</option><option>非洲</option><option>大洋洲</option>
+      </select>
+    </label>
+  </div>
+
+  <section class="grid" id="grid" aria-live="polite"></section>
+</main>
+
+<footer class="site-footer">地球人的奇妙日常 · 網頁製作期末專題</footer>
+
+<script src="data.js"></script>
+<script>
+const explored = loadExplored();
+let cat = "all";
+let continent = "all";
+let submissions = [];
+
+function render() {
+  const list = cat === "community" ? [] : CODES.filter(code => {
+    const c = COUNTRIES[code];
+    return (cat === "all" || c.cat === cat) && (continent === "all" || c.continent === continent);
+  });
+  const community = submissions.filter(s =>
+    (cat === "all" || cat === "community" || s.category === cat) &&
+    (continent === "all" || s.continent === continent));
+
+  const grid = document.getElementById("grid");
+  grid.innerHTML = (list.length + community.length) ? list.map(code => {
+    const c = COUNTRIES[code];
+    return `
+      <article class="card entry pop">
+        <div class="entry-top">
+          <span class="big-emoji">${c.emoji}</span>
+          ${explored.has(code) ? '<span class="seen">✓ 已探索</span>' : ""}
+        </div>
+        <h2>${c.name}</h2>
+        <div class="meta"><span>${c.continent}</span><span class="tag ${c.cat}">${CATEGORIES[c.cat]}</span></div>
+        <h3>${c.title}</h3>
+        <p>${c.fact}</p>
+        <a class="more" href="index.html#${code}">在地圖上看 →</a>
+      </article>`;
+  }).join("") + community.map(submissionCard).join("")
+    : '<p class="empty">這裡還沒有內容。<a href="share.html">來分享第一則日常吧！</a></p>';
+
+  document.getElementById("count").textContent = explored.size;
+  document.getElementById("total").textContent = CODES.length;
+  document.getElementById("bar").style.width = (explored.size / CODES.length * 100) + "%";
+}
+
+document.querySelectorAll(".chip").forEach(chip => {
+  chip.onclick = () => {
+    cat = chip.dataset.filter;
+    document.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === chip));
+    render();
+  };
+});
+document.getElementById("continent").onchange = e => { continent = e.target.value; render(); };
+
+// 從分享頁跳過來時（culture.html#community），直接顯示訪客投稿
+if (location.hash === "#community") {
+  cat = "community";
+  document.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c.dataset.filter === "community"));
+}
+
+render();
+fetchSubmissions().then(result => {
+  submissions = result.items;
+  document.getElementById("community-count").textContent = submissions.length ? `(${submissions.length})` : "";
+  render();
+});
+</script>
+</body>
+</html>

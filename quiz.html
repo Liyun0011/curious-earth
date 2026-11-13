@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>猜猜在哪國｜地球人的奇妙日常</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="index.html">
+      <span class="logo" aria-hidden="true"></span>
+      <span>
+        <span class="brand-name">地球人的奇妙日常</span>
+        <span class="brand-en">CURIOUS EARTH CLUB</span>
+      </span>
+    </a>
+    <nav class="site-nav" aria-label="主選單">
+      <a href="index.html">探索地圖</a>
+      <a href="culture.html">文化圖鑑</a>
+      <a href="quiz.html" class="active" aria-current="page">猜猜在哪國 ↗</a>
+      <a href="share.html">分享你的日常</a>
+      <a href="about.html">關於我們</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <div class="quiz">
+    <div class="page-head">
+      <div>
+        <h1>猜猜在哪國？</h1>
+        <p>看線索猜國家，一共 10 題。</p>
+      </div>
+    </div>
+    <section class="card" id="quiz" aria-live="polite"></section>
+  </div>
+</main>
+
+<footer class="site-footer">地球人的奇妙日常 · 網頁製作期末專題</footer>
+
+<script src="data.js"></script>
+<script>
+const TOTAL = 10;
+let questions = [];
+let index = 0;
+let score = 0;
+const box = document.getElementById("quiz");
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// 把線索裡的國名遮起來，免得直接看到答案
+function hideName(text, name) {
+  return text.split(name).join("＿＿");
+}
+
+function start() {
+  questions = shuffle(CODES).slice(0, TOTAL);
+  index = 0;
+  score = 0;
+  showQuestion();
+}
+
+function showQuestion() {
+  const answer = questions[index];
+  const c = COUNTRIES[answer];
+  const options = shuffle([answer, ...shuffle(CODES.filter(x => x !== answer)).slice(0, 3)]);
+  box.innerHTML = `
+    <div class="pop">
+      <div class="quiz-top"><span>第 ${index + 1} / ${TOTAL} 題</span><span>得分 ${score}</span></div>
+      <div class="bar"><span style="width:${index / TOTAL * 100}%"></span></div>
+      <div class="big-emoji" style="margin-top:20px">${c.emoji}</div>
+      <h2>${c.title}</h2>
+      <p class="clue">${hideName(c.fact, c.name)}</p>
+      <div class="options">${options.map(code =>
+        `<button class="option" data-code="${code}">${COUNTRIES[code].name}</button>`).join("")}
+      </div>
+      <div class="feedback" id="feedback"></div>
+    </div>`;
+  box.querySelectorAll(".option").forEach(btn => btn.onclick = () => answerWith(btn.dataset.code));
+}
+
+function answerWith(picked) {
+  const answer = questions[index];
+  const c = COUNTRIES[answer];
+  const right = picked === answer;
+  if (right) score++;
+
+  box.querySelectorAll(".option").forEach(btn => {
+    btn.disabled = true;
+    if (btn.dataset.code === answer) btn.classList.add("correct");
+    else if (btn.dataset.code === picked) btn.classList.add("wrong");
+  });
+
+  const last = index === TOTAL - 1;
+  document.getElementById("feedback").innerHTML = `
+    <div class="verdict">${right ? "🎉 答對了！" : "😮 差一點！答案是" + c.name}</div>
+    <div class="bonus" style="margin-top:8px"><b>💡 你知道嗎？</b>${c.bonus}</div>
+    <div class="card-actions">
+      <a class="btn ghost" href="index.html#${answer}">在地圖上看</a>
+      <button class="btn" id="next">${last ? "看結果" : "下一題 →"}</button>
+    </div>`;
+  document.getElementById("next").onclick = () => { index++; last ? showResult() : showQuestion(); };
+}
+
+function showResult() {
+  const msg = score >= 9 ? "你根本是地球人觀察大師！🏆"
+            : score >= 6 ? "很厲害！再多探索幾個國家吧 🌍"
+            : "還有好多奇妙日常等你發現 🧭";
+  box.innerHTML = `
+    <div class="result pop">
+      <p>你的得分</p>
+      <div class="score">${score} / ${TOTAL}</div>
+      <h2>${msg}</h2>
+      <div class="card-actions">
+        <a class="btn ghost" href="culture.html">翻翻文化圖鑑</a>
+        <button class="btn" id="again">再玩一次</button>
+      </div>
+    </div>`;
+  document.getElementById("again").onclick = start;
+}
+
+start();
+</script>
+</body>
+</html>

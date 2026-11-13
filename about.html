@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>關於我們｜地球人的奇妙日常</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="index.html">
+      <span class="logo" aria-hidden="true"></span>
+      <span>
+        <span class="brand-name">地球人的奇妙日常</span>
+        <span class="brand-en">CURIOUS EARTH CLUB</span>
+      </span>
+    </a>
+    <nav class="site-nav" aria-label="主選單">
+      <a href="index.html">探索地圖</a>
+      <a href="culture.html">文化圖鑑</a>
+      <a href="quiz.html">猜猜在哪國 ↗</a>
+      <a href="share.html">分享你的日常</a>
+      <a href="about.html" class="active" aria-current="page">關於我們</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page about">
+  <div class="slogan-block">
+    <p class="big">你的日常，<br>是別人眼中的<em>不可思議</em>。</p>
+    <p class="small">Curious Earth Club — 一個收集地球人奇妙日常的小地方。</p>
+  </div>
+
+  <section>
+    <h2>為什麼做這個網站？</h2>
+    <p>
+      有一次聽外國朋友說，台灣的垃圾車會播《給愛麗絲》讓他嚇了一跳。我才發現，自己每天習以為常的事，
+      在別人眼中可能非常新奇；反過來說，世界上也有好多我們想像不到的生活方式。
+    </p>
+    <p>
+      「地球人的奇妙日常」想用一張互動地圖，把這些有趣的小知識收集起來。
+      希望你逛完之後，除了多認識幾個國家，也能用新的眼光看看自己身邊的日常。
+    </p>
+  </section>
+
+  <section>
+    <h2>網站導覽</h2>
+    <div class="feature-grid">
+      <a class="card" href="index.html"><span class="big-emoji">🗺️</span><b>探索地圖</b><span class="d">點擊國家，解鎖當地的奇妙日常</span></a>
+      <a class="card" href="culture.html"><span class="big-emoji">📖</span><b>文化圖鑑</b><span class="d">依分類、洲別瀏覽所有收錄內容</span></a>
+      <a class="card" href="quiz.html"><span class="big-emoji">❓</span><b>猜猜在哪國</b><span class="d">10 題小測驗，考考你的世界觀</span></a>
+      <a class="card" href="share.html"><span class="big-emoji">✍️</span><b>分享你的日常</b><span class="d">投稿你身邊的不可思議</span></a>
+    </div>
+  </section>
+
+  <section>
+    <h2>使用技術</h2>
+    <div class="badges">
+      <span>HTML5 語意標籤</span><span>CSS Grid／Flexbox</span><span>RWD 響應式設計</span>
+      <span>SVG 互動地圖</span><span>JavaScript</span><span>表單驗證</span>
+      <span>Google Apps Script</span><span>Google 試算表</span><span>localStorage</span><span>GitHub Pages</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>資料來源</h2>
+    <p>網站內容整理自以下資料，如有錯誤歡迎指正。</p>
+    <table class="sources">
+      <thead><tr><th>國家</th><th>主題</th><th>參考來源</th></tr></thead>
+      <tbody id="sources"></tbody>
+    </table>
+    <p style="font-size:14px;color:var(--muted);margin-top:12px">
+      世界地圖資料：jsvectormap（MIT 授權）· 字型：Noto Sans TC（Google Fonts）
+    </p>
+  </section>
+
+  <section>
+    <h2>製作者</h2>
+    <div class="card maker">
+      <span class="logo" aria-hidden="true"></span>
+      <div>
+        <b style="font-size:18px">劉芳瑜 Edna Liu</b><br>
+        <span style="color:var(--muted)">國立臺灣科技大學 資訊管理系 · 網頁製作期末專題</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">地球人的奇妙日常 · 網頁製作期末專題</footer>
+
+<script src="data.js"></script>
+<script>
+// 參考來源：查證後把網址或書名填進 SOURCES 就會顯示
+const SOURCES = {
+  // TW: "例如：臺北市政府環境保護局網站",
+};
+document.getElementById("sources").innerHTML = CODES.map(code => {
+  const c = COUNTRIES[code];
+  const src = SOURCES[code];
+  return `<tr><td>${c.emoji} ${c.name}</td><td>${c.title}</td>
+          <td class="${src ? "" : "todo"}">${src || "（待補）"}</td></tr>`;
+}).join("");
+</script>
+</body>
+</html>

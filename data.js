@@ -1,5 +1,5 @@
 /* =========================================================
-   data.js — 三個頁面共用的資料與小工具
+   data.js — 所有頁面共用的資料（國家、英文翻譯、小曲、投稿與互動 API）
    要新增國家：在 COUNTRIES 裡照格式加一筆（代碼用兩碼國家代碼）
    ========================================================= */
 
@@ -82,6 +82,116 @@ const COUNTRIES = {
 
 const CODES = Object.keys(COUNTRIES);
 
+/* ---------- 英文版內容（語言切換用） ---------- */
+const CATEGORIES_EN = { festival: "Festivals", daily: "Daily Life", trivia: "Fun Facts" };
+const CONTINENTS_EN = { "亞洲": "Asia", "歐洲": "Europe", "美洲": "Americas", "非洲": "Africa", "大洋洲": "Oceania" };
+
+const COUNTRIES_EN = {
+  TW: { name: "Taiwan", title: "Garbage trucks that sing",
+        fact: "In Taiwan, garbage trucks play music as they drive around — usually Beethoven's Für Elise or A Maiden's Prayer. When the tune starts, everyone grabs their trash bags and heads downstairs.",
+        bonus: "Many visitors hear it for the first time and think an ice cream truck is coming!" },
+  JP: { name: "Japan", title: "KFC for Christmas",
+        fact: "A hugely successful 1970s ad campaign turned \"fried chicken for Christmas\" into a tradition for many families in Japan. Popular time slots are often booked weeks ahead.",
+        bonus: "Christmas in Japan feels more like a date night — New Year is the big family holiday." },
+  KR: { name: "Korea", title: "One year old at birth",
+        fact: "Korea traditionally used \"Korean age\": you are one year old at birth and gain a year every New Year, so a baby born in late December could be two after just a few days.",
+        bonus: "Since June 2023, Korea's laws and official documents use international age instead." },
+  NP: { name: "Nepal", title: "A flag that isn't a rectangle",
+        fact: "Nepal is the only country in the world whose national flag isn't rectangular — it's made of two stacked triangles.",
+        bonus: "The constitution even includes step-by-step instructions for drawing the flag with exact proportions." },
+  IN: { name: "India", title: "Holi: a festival of colours",
+        fact: "During Holi each spring, people across India throw coloured powder and splash coloured water at each other to welcome spring and celebrate good over evil.",
+        bonus: "Wear old clothes if you join in — the colours can take days to wash out!" },
+  TH: { name: "Thailand", title: "A nationwide water fight",
+        fact: "Songkran, the Thai New Year, runs from 13 to 15 April. It began as gently pouring water on elders for good luck — now whole streets in Thailand turn into water-gun battles.",
+        bonus: "April is the hottest month in Thailand, so getting soaked actually feels great." },
+  IS: { name: "Iceland", title: "Not a single mosquito",
+        fact: "Iceland is one of the few places where mosquitoes haven't settled, so you can enjoy summer evenings outdoors without getting bitten.",
+        bonus: "Icelanders also have the \"Christmas Book Flood\": they give each other books on Christmas Eve and spend the night reading." },
+  FI: { name: "Finland", title: "The Wife Carrying Championship",
+        fact: "The small town of Sonkajärvi in Finland hosts the Wife Carrying World Championship, where runners carry a teammate over sand, hurdles and a water pit.",
+        bonus: "Finland has an estimated three million saunas — roughly one for every two people." },
+  NL: { name: "Netherlands", title: "More bikes than people",
+        fact: "There are more bicycles than people in the Netherlands. People ride to work, school and the shops on dedicated bike lanes with their own traffic lights.",
+        bonus: "Every year, lots of bikes are fished out of Amsterdam's canals." },
+  ES: { name: "Spain", title: "The great tomato fight",
+        fact: "On the last Wednesday of August, the town of Buñol in Spain holds La Tomatina, where thousands of people throw tomatoes at each other until the streets turn red.",
+        bonus: "You now need a ticket to join, and places are limited." },
+  BG: { name: "Bulgaria", title: "Nod for no, shake for yes",
+        fact: "In Bulgaria, a nod traditionally means \"no\" and a head shake means \"yes\" — the opposite of most countries.",
+        bonus: "Some locals switch when talking to foreigners, so it's best to confirm out loud." },
+  GB: { name: "United Kingdom", title: "A unicorn as national animal",
+        fact: "Scotland, part of the United Kingdom, has the legendary unicorn as its national animal — you can even spot it on the royal coat of arms.",
+        bonus: "The unicorn symbolises purity and strength; legend says only a king could tame it." },
+  MX: { name: "Mexico", title: "Day of the Dead",
+        fact: "On 1–2 November, families in Mexico build altars with marigolds, candles and sugar skulls to welcome loved ones who have passed away back home.",
+        bonus: "The celebration is listed by UNESCO as Intangible Cultural Heritage of Humanity." },
+  BR: { name: "Brazil", title: "The world's biggest party",
+        fact: "Rio Carnival in Brazil takes place before Lent. Samba schools spend a whole year preparing floats, costumes and dances to compete on the Sambadrome.",
+        bonus: "Brazil is the world's largest Portuguese-speaking country, with about twenty times Portugal's population." },
+  CA: { name: "Canada", title: "Santa has a postal code",
+        fact: "Canada Post gave Santa his own postal code: H0H 0H0. Children can send letters there, and volunteers write back.",
+        bonus: "Look closely — H0H 0H0 is Santa's laugh: \"HO HO HO\"." },
+  ET: { name: "Ethiopia", title: "Thirteen months a year",
+        fact: "Ethiopia uses its own calendar: twelve months of 30 days, plus a thirteenth month of just 5 or 6 days.",
+        bonus: "Its year count runs about 7 to 8 years behind the Gregorian calendar." },
+  AU: { name: "Australia", title: "Christmas in shorts",
+        fact: "Australia is in the Southern Hemisphere, so Christmas falls in summer. Many people head to the beach for a barbecue — Santa might even go surfing.",
+        bonus: "Seasons are reversed south of the equator, so July is winter." },
+  NZ: { name: "New Zealand", title: "Many more sheep than people",
+        fact: "New Zealand has roughly five sheep for every person — drive through the countryside and you'll see hills dotted with white.",
+        bonus: "New Zealanders call themselves \"Kiwis\", after a flightless native bird." }
+};
+
+/* ---------- 每個國家的小曲（用 Web Audio 現場合成，不需要音檔）----------
+   notes 格式："音名八度:拍數"，例如 "E5:.5" 是 E5 半拍；"-" 是休止符。
+   台灣用貝多芬《給愛麗絲》開頭（已是公有領域）；其他都是依當地音樂風格寫的原創小旋律。 */
+const TUNES = {
+  TW: { zh: "《給愛麗絲》（貝多芬）", en: "Für Elise (Beethoven)", wave: "sine", bpm: 130,
+        notes: "E5:.5 D#5:.5 E5:.5 D#5:.5 E5:.5 B4:.5 D5:.5 C5:.5 A4:1.5 -:.5 C4:.5 E4:.5 A4:.5 B4:1.5" },
+  JP: { zh: "都節音階小曲", en: "Miyako-bushi scale tune", wave: "triangle", bpm: 110,
+        notes: "E5:.5 F5:.5 A5:1 B5:.5 A5:.5 F5:1 E5:.5 F5:.5 E5:2" },
+  KR: { zh: "五聲音階生日曲", en: "Pentatonic birthday tune", wave: "sine", bpm: 120,
+        notes: "C5:.5 D5:.5 E5:1 G5:.5 E5:.5 D5:1 C5:.5 D5:.5 C5:2" },
+  NP: { zh: "山谷風小曲", en: "Mountain valley tune", wave: "triangle", bpm: 100,
+        notes: "D5:1 F5:.5 G5:.5 A5:1 G5:.5 F5:.5 D5:2" },
+  IN: { zh: "Bhairav 風格小曲", en: "Bhairav-style tune", wave: "triangle", bpm: 110,
+        notes: "C5:.5 Db5:.5 E5:.5 F5:.5 G5:1 Ab5:.5 G5:.5 E5:1 C5:2" },
+  TH: { zh: "五聲音階潑水曲", en: "Pentatonic splash tune", wave: "triangle", bpm: 140,
+        notes: "G5:.5 A5:.5 C6:.5 A5:.5 G5:.5 E5:.5 D5:1 E5:.5 G5:.5 C5:2" },
+  IS: { zh: "極光小曲", en: "Northern lights tune", wave: "sine", bpm: 80,
+        notes: "C5:1 E5:1 F#5:1 G5:1 E5:2" },
+  FI: { zh: "小調波卡舞曲", en: "Minor-key polka", wave: "square", bpm: 170,
+        notes: "A4:.5 C5:.5 E5:.5 C5:.5 D5:.5 F5:.5 E5:1 A4:.5 B4:.5 C5:.5 D5:.5 E5:2" },
+  NL: { zh: "腳踏車鈴小曲", en: "Bicycle bell tune", wave: "sine", bpm: 140,
+        notes: "C6:.25 E6:.25 -:.5 C5:.5 E5:.5 G5:.5 C6:.5 -:.5 G5:.5 C6:1" },
+  ES: { zh: "佛朗明哥下行和弦", en: "Flamenco cadence", wave: "triangle", bpm: 120,
+        notes: "A4:.5 Bb4:.5 C5:.5 Bb4:.5 A4:.5 G4:.5 F4:.5 E4:2" },
+  BG: { zh: "7/8 拍民謠", en: "7/8 folk dance", wave: "square", bpm: 150,
+        notes: "D5:.5 F5:.5 E5:.5 G5:.5 F5:.5 E5:.5 D5:.5 C#5:.5 D5:1.5" },
+  GB: { zh: "魔法獨角獸小曲", en: "Magic unicorn tune", wave: "sine", bpm: 110,
+        notes: "C5:.5 G5:.5 E5:.5 C6:.5 B5:.5 G5:.5 A5:2" },
+  MX: { zh: "墨西哥街頭樂隊風", en: "Mariachi-style tune", wave: "triangle", bpm: 140,
+        notes: "G4:.5 B4:.5 D5:.5 G5:1 F#5:.5 E5:.5 D5:.5 B4:.5 G4:2" },
+  BR: { zh: "森巴切分小曲", en: "Samba syncopation", wave: "triangle", bpm: 130,
+        notes: "C5:.75 C5:.25 E5:.5 G5:.75 E5:.25 F5:.5 D5:.5 C5:2" },
+  CA: { zh: "HO HO HO 鈴聲", en: "HO HO HO bells", wave: "sine", bpm: 120,
+        notes: "G5:1 G5:1 G5:1 E5:.5 F5:.5 G5:2" },
+  ET: { zh: "衣索比亞五聲音階", en: "Ethiopian pentatonic", wave: "triangle", bpm: 100,
+        notes: "C5:.5 D5:.5 Eb5:1 G5:.5 Ab5:.5 G5:1 Eb5:.5 D5:.5 C5:2" },
+  AU: { zh: "海邊悠閒小曲", en: "Beach day tune", wave: "triangle", bpm: 100,
+        notes: "E5:1 G5:.5 A5:.5 G5:1 E5:.5 D5:.5 C5:2" },
+  NZ: { zh: "草原綿羊小曲", en: "Sheep meadow tune", wave: "sine", bpm: 120,
+        notes: "C5:.5 C5:.5 E5:.5 G5:.5 A5:1 G5:.5 E5:.5 C5:2" },
+  // 訪客投稿依分類播放
+  festival: { zh: "節慶小曲", en: "Festival tune", wave: "triangle", bpm: 150,
+              notes: "C5:.5 E5:.5 G5:.5 C6:1 G5:.5 C6:1.5" },
+  daily:    { zh: "日常小曲", en: "Everyday tune", wave: "sine", bpm: 110,
+              notes: "E5:.5 G5:.5 A5:1 G5:.5 E5:.5 D5:1.5" },
+  trivia:   { zh: "冷知識小曲", en: "Fun fact tune", wave: "sine", bpm: 130,
+              notes: "C5:.5 D#5:.5 G5:.5 A#5:1 G5:1.5" }
+};
+
 /* 已探索的國家：存在瀏覽器裡，三個頁面共用（存不了也不影響使用） */
 function loadExplored() {
   try { return new Set(JSON.parse(localStorage.getItem("explored") || "[]")); }
@@ -141,6 +251,7 @@ async function addSubmission(formData, mode) {
   }
 
   delete item.agree;
+  item.id = "S" + Date.now();
   item.created_at = new Date().toISOString().slice(0, 16).replace("T", " ");
   const list = loadLocalSubmissions();
   list.unshift(item);
@@ -149,28 +260,43 @@ async function addSubmission(formData, mode) {
   return { item, published: true };
 }
 
-// 投稿卡片（圖鑑頁和分享頁共用）
-function submissionCard(s) {
-  const cat = CATEGORIES[s.category] ? s.category : "daily";
-  return `
-    <article class="card entry pop community">
-      <div class="entry-top">
-        <span class="big-emoji">${escapeHTML(s.emoji)}</span>
-        <span class="by">訪客投稿</span>
-      </div>
-      <h2>${escapeHTML(s.country)}</h2>
-      <div class="meta"><span>${escapeHTML(s.continent)}</span><span class="tag ${cat}">${CATEGORIES[cat]}</span></div>
-      <h3>${escapeHTML(s.title)}</h3>
-      <p>${escapeHTML(s.content)}</p>
-      <span class="author">— ${escapeHTML(s.nickname)}</span>
-    </article>`;
+/* =========================================================
+   喜歡／砸雞蛋
+   有連上試算表 → 大家共用同一組數字
+   沒連上（或試算表還是舊版程式）→ 只記在這個瀏覽器
+   ========================================================= */
+function loadMyReactions() {
+  try { return JSON.parse(localStorage.getItem("myReactions") || "{}"); }
+  catch (e) { return {}; }
+}
+function saveMyReactions(map) {
+  try { localStorage.setItem("myReactions", JSON.stringify(map)); } catch (e) {}
 }
 
-/* 手機版導覽列可以左右滑動：把目前頁面的選項捲到看得到的位置 */
-document.addEventListener("DOMContentLoaded", () => {
-  const nav = document.querySelector(".site-nav");
-  const active = nav && nav.querySelector(".active");
-  if (active && nav.scrollWidth > nav.clientWidth) {
-    nav.scrollLeft = active.offsetLeft - (nav.clientWidth - active.offsetWidth) / 2;
+// 回傳 { shared: true/false, counts: { TW: { like, egg }, ... } }
+async function fetchReactions() {
+  if (SHEET_URL) {
+    try {
+      const res = await fetch(SHEET_URL + "?action=reactions");
+      const data = await res.json();
+      // 舊版 Apps Script 會回傳投稿陣列，代表還沒更新，改用瀏覽器模式
+      if (data && typeof data === "object" && !Array.isArray(data)) return { shared: true, counts: data };
+    } catch (e) {}
   }
-});
+  const counts = {};
+  for (const [id, type] of Object.entries(loadMyReactions())) {
+    counts[id] = { like: type === "like" ? 1 : 0, egg: type === "egg" ? 1 : 0 };
+  }
+  return { shared: false, counts };
+}
+
+// like、egg 是變化量（+1、0、-1），回傳伺服器上最新的數字
+async function sendReaction(id, like, egg) {
+  const res = await fetch(SHEET_URL, {
+    method: "POST",
+    body: JSON.stringify({ action: "react", id, like, egg })
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || "react failed");
+  return data.counts;
+}

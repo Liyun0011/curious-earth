@@ -3,11 +3,15 @@
    貼到 Google 試算表的「擴充功能 → Apps Script」裡使用，
    設定步驟請看 README.md。
 
-   GET  → 回傳「公開」有打勾的投稿（最新 50 則，JSON）
-   POST → 新增一則投稿到試算表
+   GET                     → 回傳「公開」有打勾的投稿（最新 50 則，JSON）
+   GET  ?action=reactions  → 回傳每張卡片的「喜歡」「雞蛋」數
+   POST                    → 新增一則投稿到試算表
+   POST {action:"react"}   → 更新某張卡片的「喜歡」「雞蛋」數
    ========================================================= */
 
 const SHEET_NAME = '投稿';
+const REACTION_SHEET = '反應';
+const REACTION_HEADERS = ['卡片 ID', '喜歡', '雞蛋'];
 const HEADERS = ['時間', '暱稱', '國家', '洲別', '分類', '圖示', '標題', '內容', '公開'];
 const CONTINENTS = ['亞洲', '歐洲', '美洲', '非洲', '大洋洲'];
 const CATEGORIES = ['festival', 'daily', 'trivia'];
@@ -22,10 +26,16 @@ function setup() {
   const sheet = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
   sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold');
   sheet.setFrozenRows(1);
+
+  const rs = ss.getSheetByName(REACTION_SHEET) || ss.insertSheet(REACTION_SHEET);
+  rs.getRange(1, 1, 1, REACTION_HEADERS.length).setValues([REACTION_HEADERS]).setFontWeight('bold');
+  rs.setFrozenRows(1);
 }
 
-/* ---------- 讀取投稿 ---------- */
-function doGet() {
+/* ---------- 讀取 ---------- */
+function doGet(e) {
+  if (e && e.parameter && e.parameter.action === 'reactions') return json(readReactions());
+
   const sheet = getSheet();
   const last = sheet.getLastRow();
   if (last < 2) return json([]);
@@ -34,6 +44,7 @@ function doGet() {
   const items = rows
     .filter(r => r[8] === true && r[1] !== '')
     .map(r => ({
+      id: 'S' + new Date(r[0]).getTime(),   // 用投稿時間當作固定 ID，刪掉其他列也不會跑掉
       created_at: Utilities.formatDate(new Date(r[0]), 'Asia/Taipei', 'yyyy-MM-dd HH:mm'),
       nickname: String(r[1]),
       country: String(r[2]),
@@ -56,6 +67,8 @@ function doPost(e) {
   } catch (err) {
     return json({ ok: false, error: '資料格式錯誤' });
   }
+
+  if (data.action === 'react') return json(react(data));
 
   const f = name => String(data[name] || '').trim();
   const item = {
@@ -88,11 +101,68 @@ function doPost(e) {
     ]);
     // 「公開」欄做成核取方塊：打勾才會顯示在網站上，取消勾選就隱藏
     sheet.getRange(sheet.getLastRow(), HEADERS.length).insertCheckboxes().setValue(AUTO_PUBLISH);
+    item.id = 'S' + now.getTime();
     item.created_at = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy-MM-dd HH:mm');
   } finally {
     lock.releaseLock();
   }
   return json({ ok: true, published: AUTO_PUBLISH, item: item });
+}
+
+/* ---------- 喜歡／砸雞蛋 ---------- */
+function getReactionSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let rs = ss.getSheetByName(REACTION_SHEET);
+  if (!rs) {
+    rs = ss.insertSheet(REACTION_SHEET);
+    rs.getRange(1, 1, 1, REACTION_HEADERS.length).setValues([REACTION_HEADERS]).setFontWeight('bold');
+  }
+  return rs;
+}
+
+// 回傳 { "TW": { like: 3, egg: 1 }, "S1763...": { ... } }
+function readReactions() {
+  const rs = getReactionSheet();
+  const last = rs.getLastRow();
+  const map = {};
+  if (last < 2) return map;
+  rs.getRange(2, 1, last - 1, 3).getValues().forEach(r => {
+    if (r[0] !== '') map[String(r[0])] = { like: Number(r[1]) || 0, egg: Number(r[2]) || 0 };
+  });
+  return map;
+}
+
+// data = { action: "react", id: "TW", like: 1 | 0 | -1, egg: 1 | 0 | -1 }
+// 換按鈕時（喜歡 → 雞蛋）會一次送 like:-1、egg:1
+function react(data) {
+  const id = String(data.id || '');
+  if (!/^([A-Z]{2}|S\d{10,14})$/.test(id)) return { ok: false, error: '卡片 ID 不正確' };
+  const step = v => Math.max(-1, Math.min(1, Math.round(Number(v) || 0)));
+  const dLike = step(data.like), dEgg = step(data.egg);
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const rs = getReactionSheet();
+    const last = rs.getLastRow();
+    const ids = last >= 2 ? rs.getRange(2, 1, last - 1, 1).getValues().map(r => String(r[0])) : [];
+    const index = ids.indexOf(id);
+    if (index < 0) {
+      const counts = { like: Math.max(0, dLike), egg: Math.max(0, dEgg) };
+      rs.appendRow([id, counts.like, counts.egg]);
+      return { ok: true, id: id, counts: counts };
+    }
+    const range = rs.getRange(index + 2, 2, 1, 2);
+    const cur = range.getValues()[0];
+    const counts = {
+      like: Math.max(0, (Number(cur[0]) || 0) + dLike),
+      egg: Math.max(0, (Number(cur[1]) || 0) + dEgg)
+    };
+    range.setValues([[counts.like, counts.egg]]);
+    return { ok: true, id: id, counts: counts };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /* ---------- 小工具 ---------- */

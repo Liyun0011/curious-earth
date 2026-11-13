@@ -3,11 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>分享你的日常｜地球人的奇妙日常</title>
+<title data-i18n="title.share">分享你的日常｜地球人的奇妙日常</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<!-- 先套用深淺色，避免畫面閃一下 -->
+<script>
+  try {
+    document.documentElement.dataset.theme = localStorage.getItem("theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  } catch (e) {}
+</script>
 </head>
 <body>
 
@@ -16,16 +23,16 @@
     <a class="brand" href="index.html">
       <span class="logo" aria-hidden="true"></span>
       <span>
-        <span class="brand-name">地球人的奇妙日常</span>
+        <span class="brand-name" data-i18n="brand">地球人的奇妙日常</span>
         <span class="brand-en">CURIOUS EARTH CLUB</span>
       </span>
     </a>
-    <nav class="site-nav" aria-label="主選單">
-      <a href="index.html">探索地圖</a>
-      <a href="culture.html">文化圖鑑</a>
-      <a href="quiz.html">猜猜在哪國 ↗</a>
-      <a href="share.html" class="active" aria-current="page">分享你的日常</a>
-      <a href="about.html">關於我們</a>
+    <nav class="site-nav" aria-label="主選單" data-i18n-aria="nav.label">
+      <a href="index.html" data-i18n="nav.map">探索地圖</a>
+      <a href="culture.html" data-i18n="nav.culture">文化圖鑑</a>
+      <a href="quiz.html" data-i18n="nav.quiz">猜猜在哪國 ↗</a>
+      <a href="share.html" class="active" aria-current="page" data-i18n="nav.share">分享你的日常</a>
+      <a href="about.html" data-i18n="nav.about">關於我們</a>
     </nav>
   </div>
 </header>
@@ -33,10 +40,10 @@
 <main class="page">
   <div class="page-head">
     <div>
-      <h1>分享你的日常</h1>
-      <p>你覺得理所當然的小事，可能是別人眼中的不可思議。寫下來，讓它出現在文化圖鑑裡！</p>
+      <h1 data-i18n="share.full">分享你的日常</h1>
+      <p data-i18n="share.sub">你覺得理所當然的小事，可能是別人眼中的不可思議。寫下來，讓它出現在文化圖鑑裡！</p>
     </div>
-    <span class="mode" id="mode">檢查連線中…</span>
+    <span class="mode" id="mode" data-i18n="share.checking">檢查連線中…</span>
   </div>
 
   <div class="share-layout">
@@ -45,91 +52,103 @@
 
         <div class="row">
           <div class="field">
-            <label for="nickname">暱稱<span class="req">*</span></label>
-            <input type="text" id="nickname" name="nickname" required maxlength="20" placeholder="例如：台科小資">
+            <label for="nickname"><span data-i18n="share.nickname">暱稱</span><span class="req">*</span></label>
+            <input type="text" id="nickname" name="nickname" required maxlength="20" data-i18n-placeholder="share.nicknamePh" placeholder="例如：台科小資">
           </div>
           <div class="field">
-            <label for="country">國家／地區<span class="req">*</span></label>
-            <input type="text" id="country" name="country" required maxlength="30" list="country-list" placeholder="例如：台灣">
+            <label for="country"><span data-i18n="share.country">國家／地區</span><span class="req">*</span></label>
+            <input type="text" id="country" name="country" required maxlength="30" list="country-list" data-i18n-placeholder="share.countryPh" placeholder="例如：台灣">
             <datalist id="country-list"></datalist>
           </div>
         </div>
 
         <div class="field">
-          <label for="continent">洲別<span class="req">*</span></label>
+          <label for="continent"><span data-i18n="culture.continent">洲別</span><span class="req">*</span></label>
+          <!-- value 固定用中文，因為後端用中文檢查；畫面上顯示的文字會跟著語言切換 -->
           <select id="continent" name="continent" required>
-            <option value="">請選擇</option>
-            <option>亞洲</option><option>歐洲</option><option>美洲</option><option>非洲</option><option>大洋洲</option>
+            <option value="" data-i18n="share.choose">請選擇</option>
+            <option value="亞洲" data-i18n="cont.asia">亞洲</option>
+            <option value="歐洲" data-i18n="cont.europe">歐洲</option>
+            <option value="美洲" data-i18n="cont.americas">美洲</option>
+            <option value="非洲" data-i18n="cont.africa">非洲</option>
+            <option value="大洋洲" data-i18n="cont.oceania">大洋洲</option>
           </select>
         </div>
 
         <fieldset class="field">
-          <legend>分類<span class="req">*</span></legend>
+          <legend><span data-i18n="share.category">分類</span><span class="req">*</span></legend>
           <div class="radio-group">
-            <label><input type="radio" name="category" value="festival" required><span>節慶</span></label>
-            <label><input type="radio" name="category" value="daily" checked><span>生活日常</span></label>
-            <label><input type="radio" name="category" value="trivia"><span>冷知識</span></label>
+            <label><input type="radio" name="category" value="festival" required><span data-i18n="cat.festival">節慶</span></label>
+            <label><input type="radio" name="category" value="daily" checked><span data-i18n="cat.daily">生活日常</span></label>
+            <label><input type="radio" name="category" value="trivia"><span data-i18n="cat.trivia">冷知識</span></label>
           </div>
         </fieldset>
 
         <fieldset class="field">
-          <legend>卡片圖示</legend>
+          <legend data-i18n="share.icon">卡片圖示</legend>
           <div class="radio-group emoji-group" id="emoji-group"></div>
         </fieldset>
 
         <div class="field">
-          <label for="title">標題<span class="req">*</span><span class="hint">2～20 字，一句話抓住重點</span></label>
-          <input type="text" id="title" name="title" required minlength="2" maxlength="20" placeholder="例如：宵夜是一種文化">
+          <label for="title"><span data-i18n="share.titleLabel">標題</span><span class="req">*</span><span class="hint" data-i18n="share.titleHint">2～20 字，一句話抓住重點</span></label>
+          <input type="text" id="title" name="title" required minlength="2" maxlength="20" data-i18n-placeholder="share.titlePh" placeholder="例如：宵夜是一種文化">
         </div>
 
         <div class="field">
-          <label for="content">想分享的日常<span class="req">*</span><span class="hint">20～200 字</span></label>
+          <label for="content"><span data-i18n="share.content">想分享的日常</span><span class="req">*</span><span class="hint" data-i18n="share.contentHint">20～200 字</span></label>
           <textarea id="content" name="content" required minlength="20" maxlength="200"
-            placeholder="在我們這裡……，但外國朋友聽到都很驚訝！"></textarea>
+            data-i18n-placeholder="share.contentPh" placeholder="在我們這裡……，但外國朋友聽到都很驚訝！"></textarea>
           <div class="counter" id="counter">0 / 200</div>
         </div>
 
         <label class="check field">
           <input type="checkbox" name="agree" value="yes" required>
-          我同意將這則內容公開在「文化圖鑑」<span class="req">*</span>
+          <span data-i18n="share.agree">我同意將這則內容公開在「文化圖鑑」</span><span class="req">*</span>
         </label>
 
         <div class="form-actions">
-          <button type="submit" class="btn" id="submit-btn">送出投稿</button>
-          <button type="reset" class="btn ghost">清除</button>
+          <button type="submit" class="btn" id="submit-btn" data-i18n="share.submit">送出投稿</button>
+          <button type="reset" class="btn ghost" data-i18n="share.reset">清除</button>
         </div>
         <div class="form-error" id="form-error" role="alert"></div>
       </form>
     </section>
 
     <aside class="side">
-      <p class="preview-label">即時預覽</p>
+      <p class="preview-label" data-i18n="share.preview">即時預覽</p>
       <div id="preview"></div>
     </aside>
   </div>
 
-  <h2 class="section-title">最新投稿</h2>
+  <h2 class="section-title" data-i18n="share.latest">最新投稿</h2>
   <section class="grid" id="latest"></section>
 </main>
 
-<footer class="site-footer">地球人的奇妙日常 · 網頁製作期末專題</footer>
+<footer class="site-footer" data-i18n="footer">地球人的奇妙日常 · 網頁製作期末專題</footer>
 
 <script src="data.js"></script>
+<script src="i18n.js"></script>
+<script src="app.js"></script>
 <script>
 const form = document.getElementById("share-form");
 const preview = document.getElementById("preview");
 const errorBox = document.getElementById("form-error");
 let mode = "local";
+let modeReason = "";
 let submissions = [];
+let lastError = null;    // 記住目前的錯誤，換語言時重新顯示
 
 /* ===== 1. 產生圖示選項、國家建議清單 ===== */
 document.getElementById("emoji-group").innerHTML = EMOJIS.map((e, i) =>
   `<label><input type="radio" name="emoji" value="${e}" ${i === 0 ? "checked" : ""}><span>${e}</span></label>`).join("");
-document.getElementById("country-list").innerHTML = CODES.map(c => `<option value="${COUNTRIES[c].name}">`).join("");
+function fillCountryList() {
+  document.getElementById("country-list").innerHTML = CODES.map(c => `<option value="${C(c).name}">`).join("");
+}
 
-// 輸入已收錄的國家時，自動帶入洲別
+// 輸入已收錄的國家時（中英文都可以），自動帶入洲別
 form.country.addEventListener("change", () => {
-  const code = CODES.find(c => COUNTRIES[c].name === form.country.value.trim());
+  const value = form.country.value.trim().toLowerCase();
+  const code = CODES.find(c => COUNTRIES[c].name === value || COUNTRIES_EN[c].name.toLowerCase() === value);
   if (code && !form.continent.value) form.continent.value = COUNTRIES[code].continent;
   updatePreview();
 });
@@ -139,13 +158,13 @@ function updatePreview() {
   const fd = new FormData(form);
   preview.innerHTML = submissionCard({
     emoji: fd.get("emoji") || "🌏",
-    country: fd.get("country") || "國家／地區",
-    continent: fd.get("continent") || "洲別",
+    country: fd.get("country") || t("share.country"),
+    continent: fd.get("continent") || t("culture.continent"),
     category: fd.get("category") || "daily",
-    title: fd.get("title") || "你的標題",
-    content: fd.get("content") || "在這裡寫下你覺得理所當然、別人卻覺得不可思議的日常。",
-    nickname: fd.get("nickname") || "你的暱稱"
-  }).replace("pop", "");
+    title: fd.get("title") || t("share.previewTitle"),
+    content: fd.get("content") || t("share.previewContent"),
+    nickname: fd.get("nickname") || t("share.previewName")
+  }, false).replace("pop", "");
 
   const len = form.content.value.length;
   const counter = document.getElementById("counter");
@@ -155,19 +174,25 @@ function updatePreview() {
 form.addEventListener("input", updatePreview);
 form.addEventListener("reset", () => setTimeout(() => {
   form.classList.remove("touched");
-  errorBox.textContent = "";
+  showError(null);
   updatePreview();
 }));
 
-/* ===== 3. 驗證錯誤訊息（中文） ===== */
+/* ===== 3. 驗證錯誤訊息 ===== */
 function firstError() {
-  if (!form.nickname.value.trim()) return ["nickname", "請填寫暱稱"];
-  if (!form.country.value.trim()) return ["country", "請填寫國家／地區"];
-  if (!form.continent.value) return ["continent", "請選擇洲別"];
-  if (form.title.value.trim().length < 2) return ["title", "標題至少要 2 個字"];
-  if (form.content.value.trim().length < 20) return ["content", `內容至少要 20 個字（目前 ${form.content.value.trim().length} 字）`];
-  if (!form.agree.checked) return ["agree", "請勾選同意公開分享"];
+  if (!form.nickname.value.trim()) return ["nickname", "err.nickname"];
+  if (!form.country.value.trim()) return ["country", "err.country"];
+  if (!form.continent.value) return ["continent", "err.continent"];
+  if (form.title.value.trim().length < 2) return ["title", "err.title"];
+  if (form.content.value.trim().length < 20) return ["content", "err.content", { n: form.content.value.trim().length }];
+  if (!form.agree.checked) return ["agree", "err.agree"];
   return null;
+}
+// err 可以是 [欄位, 文字代碼, 變數]，或是伺服器傳回的一段文字
+function showError(err) {
+  lastError = err;
+  if (!err) { errorBox.textContent = ""; return; }
+  errorBox.textContent = "⚠️ " + (typeof err === "string" ? err : t(err[1], err[2]));
 }
 
 /* ===== 4. 送出 ===== */
@@ -176,14 +201,14 @@ form.addEventListener("submit", async e => {
   form.classList.add("touched");
   const err = firstError();
   if (err) {
-    errorBox.textContent = "⚠️ " + err[1];
+    showError(err);
     form[err[0]].focus();
     return;
   }
-  errorBox.textContent = "";
+  showError(null);
   const btn = document.getElementById("submit-btn");
   btn.disabled = true;
-  btn.textContent = "送出中…";
+  btn.textContent = t("share.sending");
   try {
     const { item, published } = await addSubmission(new FormData(form), mode);
     if (published) {
@@ -192,43 +217,60 @@ form.addEventListener("submit", async e => {
     }
     showSuccess(item, published);
   } catch (ex) {
-    errorBox.textContent = "⚠️ " + ex.message;
-  } finally {
+    showError(ex.message);
     btn.disabled = false;
-    btn.textContent = "送出投稿";
+    btn.textContent = t("share.submit");
   }
 });
 
+let successState = null;
 function showSuccess(item, published) {
+  successState = { item, published };
   document.getElementById("form-area").innerHTML = `
     <div class="success pop">
       <div class="big-emoji">🎉</div>
-      <h2>謝謝你的分享，${escapeHTML(item.nickname)}！</h2>
-      <p>${published ? "你的日常已經收進文化圖鑑了。" : "投稿已送出，審核通過後就會出現在文化圖鑑。"}</p>
+      <h2>${t("share.thanks", { name: escapeHTML(item.nickname) })}</h2>
+      <p>${published ? t("share.published") : t("share.pending")}</p>
       <div class="card-actions">
-        <a class="btn ghost" href="culture.html#community">去圖鑑看看</a>
-        <button class="btn" onclick="location.reload()">再分享一則</button>
+        <a class="btn ghost" href="culture.html#community">${t("share.toCulture")}</a>
+        <button class="btn" onclick="location.reload()">${t("share.again")}</button>
       </div>
     </div>`;
 }
 
 function renderLatest() {
   document.getElementById("latest").innerHTML = submissions.length
-    ? submissions.slice(0, 6).map(submissionCard).join("")
-    : '<p class="empty">還沒有人投稿，成為第一個吧！</p>';
+    ? submissions.slice(0, 6).map(s => submissionCard(s)).join("")
+    : `<p class="empty">${t("share.none")}</p>`;
 }
 
-/* ===== 5. 啟動：判斷是存資料庫還是存瀏覽器 ===== */
+function renderMode() {
+  const label = document.getElementById("mode");
+  if (!label.dataset.ready) return;
+  label.textContent = mode === "sheet" ? t("mode.sheet") : modeReason === "error" ? t("mode.error") : t("mode.local");
+  label.classList.toggle("server", mode === "sheet");
+}
+
+document.addEventListener("langchange", () => {
+  fillCountryList();
+  updatePreview();
+  renderMode();
+  renderLatest();
+  if (lastError) showError(lastError);
+  if (successState) showSuccess(successState.item, successState.published);
+});
+
+/* ===== 5. 啟動：判斷是存試算表還是存瀏覽器 ===== */
+fillCountryList();
 updatePreview();
 fetchSubmissions().then(result => {
   mode = result.mode;
+  modeReason = result.reason;
   submissions = result.items;
   const label = document.getElementById("mode");
-  label.textContent =
-    mode === "sheet" ? "已連線 Google 試算表" :
-    result.reason === "error" ? "目前連不上試算表，投稿會暫存在這個瀏覽器" :
-    "示範模式：投稿會存在這個瀏覽器";
-  label.classList.toggle("server", mode === "sheet");
+  label.dataset.ready = "1";
+  delete label.dataset.i18n;     // 之後由 renderMode 控制文字
+  renderMode();
   renderLatest();
 });
 </script>

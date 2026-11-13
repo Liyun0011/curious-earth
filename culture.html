@@ -3,11 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>文化圖鑑｜地球人的奇妙日常</title>
+<title data-i18n="title.culture">文化圖鑑｜地球人的奇妙日常</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<!-- 先套用深淺色，避免畫面閃一下 -->
+<script>
+  try {
+    document.documentElement.dataset.theme = localStorage.getItem("theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  } catch (e) {}
+</script>
 </head>
 <body>
 
@@ -16,16 +23,16 @@
     <a class="brand" href="index.html">
       <span class="logo" aria-hidden="true"></span>
       <span>
-        <span class="brand-name">地球人的奇妙日常</span>
+        <span class="brand-name" data-i18n="brand">地球人的奇妙日常</span>
         <span class="brand-en">CURIOUS EARTH CLUB</span>
       </span>
     </a>
-    <nav class="site-nav" aria-label="主選單">
-      <a href="index.html">探索地圖</a>
-      <a href="culture.html" class="active" aria-current="page">文化圖鑑</a>
-      <a href="quiz.html">猜猜在哪國 ↗</a>
-      <a href="share.html">分享你的日常</a>
-      <a href="about.html">關於我們</a>
+    <nav class="site-nav" aria-label="主選單" data-i18n-aria="nav.label">
+      <a href="index.html" data-i18n="nav.map">探索地圖</a>
+      <a href="culture.html" class="active" aria-current="page" data-i18n="nav.culture">文化圖鑑</a>
+      <a href="quiz.html" data-i18n="nav.quiz">猜猜在哪國 ↗</a>
+      <a href="share.html" data-i18n="nav.share">分享你的日常</a>
+      <a href="about.html" data-i18n="nav.about">關於我們</a>
     </nav>
   </div>
 </header>
@@ -33,26 +40,30 @@
 <main class="page">
   <div class="page-head">
     <div>
-      <h1>文化圖鑑</h1>
-      <p>收集全世界的奇妙日常，看看你已經解鎖了幾張。</p>
+      <h1 data-i18n="culture.full">文化圖鑑</h1>
+      <p data-i18n="culture.sub">收集全世界的奇妙日常，看看你已經解鎖了幾張。點卡片可以聽音樂！</p>
     </div>
     <div class="progress">
-      <div class="progress-label">已收集 <strong id="count">0</strong> / <span id="total">0</span> 張</div>
+      <div class="progress-label" id="progress-label"></div>
       <div class="bar"><span id="bar"></span></div>
     </div>
   </div>
 
-  <div class="toolbar" role="group" aria-label="篩選">
-    <button class="chip" data-filter="all" aria-pressed="true">全部</button>
-    <button class="chip" data-filter="festival" aria-pressed="false"><span class="dot" style="background:var(--festival)"></span>節慶</button>
-    <button class="chip" data-filter="daily" aria-pressed="false"><span class="dot" style="background:var(--daily)"></span>生活日常</button>
-    <button class="chip" data-filter="trivia" aria-pressed="false"><span class="dot" style="background:var(--trivia)"></span>冷知識</button>
-    <button class="chip" data-filter="community" aria-pressed="false">✍️ 訪客投稿 <span id="community-count"></span></button>
+  <div class="toolbar" role="group" aria-label="篩選" data-i18n-aria="filter.label">
+    <button class="chip" data-filter="all" aria-pressed="true" data-i18n="filter.all">全部</button>
+    <button class="chip" data-filter="festival" aria-pressed="false"><span class="dot" style="background:var(--festival)"></span><span data-i18n="cat.festival">節慶</span></button>
+    <button class="chip" data-filter="daily" aria-pressed="false"><span class="dot" style="background:var(--daily)"></span><span data-i18n="cat.daily">生活日常</span></button>
+    <button class="chip" data-filter="trivia" aria-pressed="false"><span class="dot" style="background:var(--trivia)"></span><span data-i18n="cat.trivia">冷知識</span></button>
+    <button class="chip" data-filter="community" aria-pressed="false">✍️ <span data-i18n="card.visitor">訪客投稿</span> <span id="community-count"></span></button>
     <span class="spacer"></span>
-    <label>洲別
+    <label><span data-i18n="culture.continent">洲別</span>
       <select id="continent">
-        <option value="all">全部</option>
-        <option>亞洲</option><option>歐洲</option><option>美洲</option><option>非洲</option><option>大洋洲</option>
+        <option value="all" data-i18n="filter.all">全部</option>
+        <option value="亞洲" data-i18n="cont.asia">亞洲</option>
+        <option value="歐洲" data-i18n="cont.europe">歐洲</option>
+        <option value="美洲" data-i18n="cont.americas">美洲</option>
+        <option value="非洲" data-i18n="cont.africa">非洲</option>
+        <option value="大洋洲" data-i18n="cont.oceania">大洋洲</option>
       </select>
     </label>
   </div>
@@ -60,14 +71,33 @@
   <section class="grid" id="grid" aria-live="polite"></section>
 </main>
 
-<footer class="site-footer">地球人的奇妙日常 · 網頁製作期末專題</footer>
+<footer class="site-footer" data-i18n="footer">地球人的奇妙日常 · 網頁製作期末專題</footer>
 
 <script src="data.js"></script>
+<script src="i18n.js"></script>
+<script src="app.js"></script>
 <script>
 const explored = loadExplored();
 let cat = "all";
 let continent = "all";
 let submissions = [];
+
+function countryCard(code) {
+  const c = C(code);
+  return `
+    <article class="card entry pop" data-tune="${code}">
+      <div class="entry-top">
+        <span class="big-emoji">${c.emoji}</span>
+        ${explored.has(code) ? `<span class="seen">✓ ${t("culture.seen")}</span>` : ""}
+      </div>
+      <h2>${c.name}</h2>
+      <div class="meta"><span>${c.continent}</span><span class="tag ${c.cat}">${catName(c.cat)}</span></div>
+      <h3>${c.title}</h3>
+      <p>${c.fact}</p>
+      <a class="more" href="index.html#${code}">${t("culture.onMap")}</a>
+      ${cardActions(code, { tune: code, share: { title: `${c.name}｜${c.title}`, text: `${c.emoji} ${c.name}｜${c.title} — ${t("brand")}`, hash: code } })}
+    </article>`;
+}
 
 function render() {
   const list = cat === "community" ? [] : CODES.filter(code => {
@@ -79,25 +109,12 @@ function render() {
     (continent === "all" || s.continent === continent));
 
   const grid = document.getElementById("grid");
-  grid.innerHTML = (list.length + community.length) ? list.map(code => {
-    const c = COUNTRIES[code];
-    return `
-      <article class="card entry pop">
-        <div class="entry-top">
-          <span class="big-emoji">${c.emoji}</span>
-          ${explored.has(code) ? '<span class="seen">✓ 已探索</span>' : ""}
-        </div>
-        <h2>${c.name}</h2>
-        <div class="meta"><span>${c.continent}</span><span class="tag ${c.cat}">${CATEGORIES[c.cat]}</span></div>
-        <h3>${c.title}</h3>
-        <p>${c.fact}</p>
-        <a class="more" href="index.html#${code}">在地圖上看 →</a>
-      </article>`;
-  }).join("") + community.map(submissionCard).join("")
-    : '<p class="empty">這裡還沒有內容。<a href="share.html">來分享第一則日常吧！</a></p>';
+  grid.innerHTML = (list.length + community.length)
+    ? list.map(countryCard).join("") + community.map(s => submissionCard(s)).join("")
+    : `<p class="empty">${t("culture.empty")} <a href="share.html">${t("culture.emptyLink")}</a></p>`;
 
-  document.getElementById("count").textContent = explored.size;
-  document.getElementById("total").textContent = CODES.length;
+  document.getElementById("progress-label").innerHTML =
+    t("culture.progress", { n: `<strong>${explored.size}</strong>`, total: CODES.length });
   document.getElementById("bar").style.width = (explored.size / CODES.length * 100) + "%";
 }
 
@@ -109,6 +126,7 @@ document.querySelectorAll(".chip").forEach(chip => {
   };
 });
 document.getElementById("continent").onchange = e => { continent = e.target.value; render(); };
+document.addEventListener("langchange", render);
 
 // 從分享頁跳過來時（culture.html#community），直接顯示訪客投稿
 if (location.hash === "#community") {

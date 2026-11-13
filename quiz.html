@@ -3,11 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>猜猜在哪國｜地球人的奇妙日常</title>
+<title data-i18n="title.quiz">猜猜在哪國｜地球人的奇妙日常</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<!-- 先套用深淺色，避免畫面閃一下 -->
+<script>
+  try {
+    document.documentElement.dataset.theme = localStorage.getItem("theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  } catch (e) {}
+</script>
 </head>
 <body>
 
@@ -16,16 +23,16 @@
     <a class="brand" href="index.html">
       <span class="logo" aria-hidden="true"></span>
       <span>
-        <span class="brand-name">地球人的奇妙日常</span>
+        <span class="brand-name" data-i18n="brand">地球人的奇妙日常</span>
         <span class="brand-en">CURIOUS EARTH CLUB</span>
       </span>
     </a>
-    <nav class="site-nav" aria-label="主選單">
-      <a href="index.html">探索地圖</a>
-      <a href="culture.html">文化圖鑑</a>
-      <a href="quiz.html" class="active" aria-current="page">猜猜在哪國 ↗</a>
-      <a href="share.html">分享你的日常</a>
-      <a href="about.html">關於我們</a>
+    <nav class="site-nav" aria-label="主選單" data-i18n-aria="nav.label">
+      <a href="index.html" data-i18n="nav.map">探索地圖</a>
+      <a href="culture.html" data-i18n="nav.culture">文化圖鑑</a>
+      <a href="quiz.html" class="active" aria-current="page" data-i18n="nav.quiz">猜猜在哪國 ↗</a>
+      <a href="share.html" data-i18n="nav.share">分享你的日常</a>
+      <a href="about.html" data-i18n="nav.about">關於我們</a>
     </nav>
   </div>
 </header>
@@ -34,22 +41,26 @@
   <div class="quiz">
     <div class="page-head">
       <div>
-        <h1>猜猜在哪國？</h1>
-        <p>看線索猜國家，一共 10 題。</p>
+        <h1 data-i18n="quiz.title">猜猜在哪國？</h1>
+        <p data-i18n="quiz.sub">看線索猜國家，一共 10 題。</p>
       </div>
     </div>
     <section class="card" id="quiz" aria-live="polite"></section>
   </div>
 </main>
 
-<footer class="site-footer">地球人的奇妙日常 · 網頁製作期末專題</footer>
+<footer class="site-footer" data-i18n="footer">地球人的奇妙日常 · 網頁製作期末專題</footer>
 
 <script src="data.js"></script>
+<script src="i18n.js"></script>
+<script src="app.js"></script>
 <script>
 const TOTAL = 10;
-let questions = [];
+// 測驗狀態：換語言時用同一份狀態重畫，不會重新出題
+let questions = [];   // [{ answer: "TW", options: ["TW", "JP", ...], picked: null }]
 let index = 0;
 let score = 0;
+let finished = false;
 const box = document.getElementById("quiz");
 
 function shuffle(arr) {
@@ -67,70 +78,108 @@ function hideName(text, name) {
 }
 
 function start() {
-  questions = shuffle(CODES).slice(0, TOTAL);
+  questions = shuffle(CODES).slice(0, TOTAL).map(answer => ({
+    answer,
+    options: shuffle([answer, ...shuffle(CODES.filter(x => x !== answer)).slice(0, 3)]),
+    picked: null
+  }));
   index = 0;
   score = 0;
-  showQuestion();
+  finished = false;
+  render();
 }
 
-function showQuestion() {
-  const answer = questions[index];
-  const c = COUNTRIES[answer];
-  const options = shuffle([answer, ...shuffle(CODES.filter(x => x !== answer)).slice(0, 3)]);
+function render() {
+  finished ? renderResult() : renderQuestion();
+}
+
+function renderQuestion() {
+  const q = questions[index];
+  const c = C(q.answer);
   box.innerHTML = `
     <div class="pop">
-      <div class="quiz-top"><span>第 ${index + 1} / ${TOTAL} 題</span><span>得分 ${score}</span></div>
+      <div class="quiz-top"><span>${t("quiz.progress", { n: index + 1, total: TOTAL })}</span><span>${t("quiz.score", { n: score })}</span></div>
       <div class="bar"><span style="width:${index / TOTAL * 100}%"></span></div>
       <div class="big-emoji" style="margin-top:20px">${c.emoji}</div>
       <h2>${c.title}</h2>
       <p class="clue">${hideName(c.fact, c.name)}</p>
-      <div class="options">${options.map(code =>
-        `<button class="option" data-code="${code}">${COUNTRIES[code].name}</button>`).join("")}
+      <div class="options">${q.options.map(code =>
+        `<button class="option" data-code="${code}">${C(code).name}</button>`).join("")}
       </div>
       <div class="feedback" id="feedback"></div>
     </div>`;
   box.querySelectorAll(".option").forEach(btn => btn.onclick = () => answerWith(btn.dataset.code));
+  if (q.picked) showFeedback();
 }
 
 function answerWith(picked) {
-  const answer = questions[index];
-  const c = COUNTRIES[answer];
-  const right = picked === answer;
-  if (right) score++;
+  const q = questions[index];
+  q.picked = picked;
+  if (picked === q.answer) {
+    score++;
+    if (soundOn) playTune(q.answer);   // 答對就播那個國家的小曲
+  }
+  box.querySelector(".quiz-top span:last-child").textContent = t("quiz.score", { n: score });
+  showFeedback();
+}
 
+function showFeedback() {
+  const q = questions[index];
+  const c = C(q.answer);
+  const right = q.picked === q.answer;
   box.querySelectorAll(".option").forEach(btn => {
     btn.disabled = true;
-    if (btn.dataset.code === answer) btn.classList.add("correct");
-    else if (btn.dataset.code === picked) btn.classList.add("wrong");
+    if (btn.dataset.code === q.answer) btn.classList.add("correct");
+    else if (btn.dataset.code === q.picked) btn.classList.add("wrong");
   });
 
   const last = index === TOTAL - 1;
   document.getElementById("feedback").innerHTML = `
-    <div class="verdict">${right ? "🎉 答對了！" : "😮 差一點！答案是" + c.name}</div>
-    <div class="bonus" style="margin-top:8px"><b>💡 你知道嗎？</b>${c.bonus}</div>
+    <div class="verdict">${right ? t("quiz.right") : t("quiz.wrong", { name: c.name })}</div>
+    <div class="bonus" style="margin-top:8px"><b>💡 ${t("card.didYouKnow")}</b>${c.bonus}</div>
     <div class="card-actions">
-      <a class="btn ghost" href="index.html#${answer}">在地圖上看</a>
-      <button class="btn" id="next">${last ? "看結果" : "下一題 →"}</button>
+      <a class="btn ghost" href="index.html#${q.answer}">${t("quiz.onMap")}</a>
+      <button class="btn" id="next">${last ? t("quiz.seeResult") : t("quiz.next")}</button>
     </div>`;
-  document.getElementById("next").onclick = () => { index++; last ? showResult() : showQuestion(); };
+  document.getElementById("next").onclick = () => {
+    if (last) finished = true; else index++;
+    render();
+  };
 }
 
-function showResult() {
-  const msg = score >= 9 ? "你根本是地球人觀察大師！🏆"
-            : score >= 6 ? "很厲害！再多探索幾個國家吧 🌍"
-            : "還有好多奇妙日常等你發現 🧭";
+function renderResult() {
+  const msg = score >= 9 ? t("quiz.msgHigh") : score >= 6 ? t("quiz.msgMid") : t("quiz.msgLow");
   box.innerHTML = `
     <div class="result pop">
-      <p>你的得分</p>
+      <p>${t("quiz.yourScore")}</p>
       <div class="score">${score} / ${TOTAL}</div>
       <h2>${msg}</h2>
       <div class="card-actions">
-        <a class="btn ghost" href="culture.html">翻翻文化圖鑑</a>
-        <button class="btn" id="again">再玩一次</button>
+        <a class="btn ghost" href="culture.html">${t("quiz.toCulture")}</a>
+        <button class="btn ghost" id="share-score">↗ ${t("quiz.shareScore")}</button>
+        <button class="btn" id="again">${t("quiz.again")}</button>
       </div>
     </div>`;
   document.getElementById("again").onclick = start;
+  document.getElementById("share-score").onclick = () => shareLink({
+    title: t("quiz.title"),
+    text: t("quiz.shareText", { n: score, total: TOTAL }),
+    page: "quiz.html"
+  });
+  if (score >= 6) confetti();
 }
+
+document.addEventListener("langchange", () => {
+  // 結果頁換語言時不要再撒一次彩帶
+  if (finished) {
+    const keep = window.confetti;
+    window.confetti = () => {};
+    render();
+    window.confetti = keep;
+  } else {
+    render();
+  }
+});
 
 start();
 </script>

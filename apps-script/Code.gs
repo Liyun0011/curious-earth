@@ -136,7 +136,7 @@ function readReactions() {
 // 換按鈕時（喜歡 → 雞蛋）會一次送 like:-1、egg:1
 function react(data) {
   const id = String(data.id || '');
-  if (!/^([A-Z]{2}|S\d{10,14})$/.test(id)) return { ok: false, error: '卡片 ID 不正確' };
+  if (!/^([A-Z]{2}\d?|S\d{10,14})$/.test(id)) return { ok: false, error: '卡片 ID 不正確' };
   const step = v => Math.max(-1, Math.min(1, Math.round(Number(v) || 0)));
   const dLike = step(data.like), dEgg = step(data.egg);
 

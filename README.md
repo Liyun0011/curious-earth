@@ -21,10 +21,22 @@
 | 檔案 | 內容 |
 |---|---|
 | `style.css` | 樣式（淺色／深色模式都用 CSS 變數控制） |
-| `data.js` | 國家資料、英文翻譯、每國小曲、投稿與按讚 API |
+| `data.js` | 197 個國家、207 則小知識（中英文）、小曲、投稿與按讚 API |
 | `i18n.js` | 介面文字（中文／English） |
 | `app.js` | 共用互動：語言切換、深淺色、音樂、喜歡／砸雞蛋、分享、里程徽章 |
 | `apps-script/Code.gs` | Google Apps Script 後端（投稿、按讚數） |
+
+## 新增小知識
+
+打開 `data.js`：
+
+1. 國家還沒有的話，先在 `COUNTRIES` 加一行：`代碼: { name: "中文名", en: "English", continent: "洲別", lat: 緯度, lon: 經度 }`
+   （代碼用兩碼國家代碼，例如台灣 `TW`；經緯度是給地圖上畫不出來的小國家標圓點用的）
+2. 在 `FACTS` 加一筆：`{ id, code, cat, emoji, title, fact, bonus, en: { title, fact, bonus } }`
+   - `id`：一個國家的第一則用國家代碼，第二則加 2（例如 `TH2`），第三則加 3
+   - `cat`：`festival` 節慶／`daily` 生活日常／`trivia` 冷知識
+   - `bonus`：「你知道嗎？」補充，可以省略
+3. 改完後，把每個 HTML 裡 `?v=` 後面的版本號改一下，瀏覽器才會抓新檔案。
 
 ## 互動功能
 

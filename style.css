@@ -312,6 +312,22 @@ table.sources { width: 100%; border-collapse: collapse; background: var(--card);
 .maker .logo { width: 64px; height: 64px; }
 .maker .logo::after { width: 46px; height: 46px; }
 
+/* ---------- 搜尋、分頁、一國多則 ---------- */
+.search {
+  width: 100%; font: inherit; font-size: 15px; color: var(--ink); background: var(--input);
+  border: 1.5px solid var(--line); border-radius: 99px; padding: 8px 16px; margin-top: 4px;
+}
+.search:focus { outline: none; border-color: var(--ink); }
+.search.small { width: 220px; margin: 0; padding: 5px 14px; }
+.pick-hint { font-size: 14px; color: var(--muted); margin: 10px 0 0 !important; }
+.fact-pager { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 14px; color: var(--muted); }
+.fact-pager .act { padding: 0 12px; font-size: 18px; line-height: 1.5; }
+.result-count { color: var(--muted); font-size: 14px; margin: -6px 0 10px; }
+.more-wrap { text-align: center; margin-top: 24px; }
+.sources-box summary { cursor: pointer; font-weight: 700; color: var(--accent); margin-bottom: 12px; }
+.pin { outline: none; }
+.pin.active .core, .pin:focus .core { fill: var(--ink) !important; r: 4.5; }
+
 /* ---------- 右上角：音樂／深淺色／語言 ---------- */
 .controls { display: flex; gap: 6px; align-items: center; }
 .icon-btn {
@@ -427,6 +443,7 @@ table.sources { width: 100%; border-collapse: collapse; background: var(--card);
   .site-nav a { padding: 12px 10px 10px; font-size: 16px; white-space: nowrap; }
   .share-layout { grid-template-columns: 1fr; }
   .row { grid-template-columns: 1fr; }
+  .search.small { width: 100%; }
   .rings { width: 320px; height: 320px; right: -140px; opacity: .6; }
   .rings span:nth-child(2) { inset: 40px; } .rings span:nth-child(3) { inset: 80px; } .rings span:nth-child(4) { inset: 120px; }
   .hero .inner { padding: 48px 20px 56px; }

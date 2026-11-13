@@ -24,13 +24,24 @@ function t(key, vars = {}) {
   return text.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
 }
 
-// 取得某個國家目前語言的資料
-function C(code) {
-  const base = COUNTRIES[code];
-  if (LANG === "zh") return base;
-  const en = COUNTRIES_EN[code];
-  return { ...base, ...en, continent: CONTINENTS_EN[base.continent] || base.continent };
+// 國家名稱（目前語言）
+function countryName(code) {
+  const c = COUNTRIES[code];
+  return c ? (LANG === "en" ? c.en : c.name) : code;
 }
+
+// 取得一則小知識在目前語言的內容，順便帶上國名和洲別
+function F(f) {
+  const text = LANG === "en" ? f.en : f;
+  return {
+    ...f,
+    title: text.title, fact: text.fact, bonus: text.bonus || "",
+    name: countryName(f.code), continent: contName(COUNTRIES[f.code].continent)
+  };
+}
+
+// 這則小知識要播哪首曲子：有專屬的就用專屬的，沒有就依分類
+function tuneKey(f) { return TUNES[f.id] ? f.id : f.cat; }
 function catName(cat) { return (LANG === "en" ? CATEGORIES_EN : CATEGORIES)[cat] || cat; }
 function contName(zh) { return LANG === "en" ? (CONTINENTS_EN[zh] || zh) : zh; }
 
@@ -312,11 +323,14 @@ async function shareLink({ title, text, page = "index.html", hash = "" }) {
 }
 
 /* =========================================================
-   6. 里程徽章：每探索 5 國一個，全部探索完再一個
+   6. 里程徽章：探索 5、10、15、25、50、75、100、150 國，全部探索完再一個
    ========================================================= */
+const BADGE_STEPS = [
+  { n: 5, icon: "🥉" }, { n: 10, icon: "🥈" }, { n: 15, icon: "🥇" }, { n: 25, icon: "🎒" },
+  { n: 50, icon: "🧭" }, { n: 75, icon: "🗺️" }, { n: 100, icon: "✈️" }, { n: 150, icon: "🚀" }
+];
 function badgeList() {
-  const list = [];
-  for (let n = 5; n < CODES.length; n += 5) list.push({ n, key: "badge." + n, icon: ["🥉", "🥈", "🥇"][n / 5 - 1] || "🎖️" });
+  const list = BADGE_STEPS.filter(b => b.n < CODES.length).map(b => ({ ...b, key: "badge." + b.n }));
   list.push({ n: CODES.length, key: "badge.all", icon: "🌏" });
   return list;
 }
@@ -366,6 +380,28 @@ function confetti() {
 /* =========================================================
    卡片（圖鑑頁和分享頁共用）
    ========================================================= */
+function shareInfo(fx) {
+  return { title: `${fx.name}｜${fx.title}`, text: `${fx.emoji} ${fx.name}｜${fx.title} — ${t("brand")}`, hash: fx.id };
+}
+
+// 一則小知識的卡片；seen：這個國家是否已探索
+function factCard(f, seen) {
+  const fx = F(f);
+  return `
+    <article class="card entry pop" data-tune="${tuneKey(f)}">
+      <div class="entry-top">
+        <span class="big-emoji">${fx.emoji}</span>
+        ${seen ? `<span class="seen">✓ ${t("culture.seen")}</span>` : ""}
+      </div>
+      <h2>${fx.name}</h2>
+      <div class="meta"><span>${fx.continent}</span><span class="tag ${fx.cat}">${catName(fx.cat)}</span></div>
+      <h3>${fx.title}</h3>
+      <p>${fx.fact}</p>
+      <a class="more" href="index.html#${fx.id}">${t("culture.onMap")}</a>
+      ${cardActions(fx.id, { tune: tuneKey(f), share: shareInfo(fx) })}
+    </article>`;
+}
+
 function submissionId(s) {
   return s.id || "S" + (Date.parse(String(s.created_at).replace(" ", "T")) || 0);
 }

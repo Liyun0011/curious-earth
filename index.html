@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261113b">
+<link rel="stylesheet" href="style.css?v=20261113c">
 <!-- 先套用深淺色，避免畫面閃一下 -->
 <script>
   try {
@@ -45,12 +45,12 @@
     <p class="lead" data-i18n="hero.lead">台灣的垃圾車會唱歌、芬蘭有背老婆大賽、衣索比亞一年有 13 個月。點開世界地圖，看看地球人各種意想不到的日常。</p>
     <div class="hero-actions">
       <a class="btn" href="#explore" data-i18n="hero.start">開始探索 ↓</a>
-      <a class="btn ghost" href="share.html" data-i18n="share.full">分享你的日常</a>
+      <a class="btn ghost" href="share.html" data-i18n="nav.share">分享你的日常</a>
     </div>
     <div class="stats">
       <div><strong id="stat-countries">18</strong><span data-i18n="stat.countries">個國家</span></div>
+      <div><strong id="stat-facts">207</strong><span data-i18n="stat.facts">則奇妙日常</span></div>
       <div><strong>5</strong><span data-i18n="stat.continents">大洲</span></div>
-      <div><strong>3</strong><span data-i18n="stat.categories">種分類</span></div>
     </div>
   </div>
 </section>
@@ -99,20 +99,27 @@
   window.jsVectorMap = { addMap: function (name, data) { window.__maps[name] = data; } };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/jsvectormap@1.5.3/dist/maps/world.js"></script>
-<script src="data.js?v=20261113b"></script>
-<script src="i18n.js?v=20261113b"></script>
-<script src="app.js?v=20261113b"></script>
+<script src="data.js?v=20261113c"></script>
+<script src="i18n.js?v=20261113c"></script>
+<script src="app.js?v=20261113c"></script>
 
 <script>
 const explored = loadExplored();
-let current = null;
+let current = null;      // 目前選的國家代碼
+let factIndex = 0;       // 這個國家的第幾則
 let filter = "all";
+let searchText = "";
 let mapLoaded = false;
 
 const svg = document.getElementById("map");
 const tooltip = document.getElementById("tooltip");
 const card = document.getElementById("card");
 const NS = "http://www.w3.org/2000/svg";
+
+// 國家在地圖上的顏色：用它第一則小知識的分類
+function mainCat(code) { return FACTS_BY_CODE[code][0].cat; }
+// 篩選分類時，只要這國有任何一則符合就顯示
+function visible(code) { return filter === "all" || FACTS_BY_CODE[code].some(f => f.cat === filter); }
 
 /* ===== 畫地圖 ===== */
 function drawMap() {
@@ -138,37 +145,49 @@ function drawMap() {
     path.setAttribute("class", "land");
     path.dataset.code = code;
     path.dataset.en = info.name;
-    if (COUNTRIES[code]) {
-      path.classList.add("featured", COUNTRIES[code].cat);
+    if (FACTS_BY_CODE[code]) {
+      path.classList.add("featured", mainCat(code));
       path.setAttribute("tabindex", "0");
       path.setAttribute("role", "button");
     }
     landLayer.appendChild(path);
   }
 
-  // 小國家不好點，所以在每個收錄國家的中心加一個圓點
+  // 圓點：太小不好點的國家，以及地圖上根本沒畫出來的國家
+  const toXY = makeProjection(landLayer);
+  const pins = [];
   for (const code of CODES) {
     const path = landLayer.querySelector(`[data-code="${code}"]`);
-    if (!path) continue;
-    const b = path.getBBox();
-    const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+    let x, y;
+    if (path) {
+      const b = path.getBBox();
+      if (b.width * b.height > 60) continue;          // 夠大，直接點國家就好
+      x = b.x + b.width / 2; y = b.y + b.height / 2;
+    } else if (toXY) {
+      [x, y] = toXY(COUNTRIES[code].lat, COUNTRIES[code].lon);
+    } else continue;
+    pins.push({ code, x, y });
+  }
+  spreadPins(pins, 7.5);
+  for (const { code, x, y } of pins) {
     const g = document.createElementNS(NS, "g");
-    g.setAttribute("class", "pin " + COUNTRIES[code].cat);
+    g.setAttribute("class", "pin " + mainCat(code));
     g.dataset.code = code;
-    g.innerHTML =
-      `<circle class="pulse" cx="${cx}" cy="${cy}" r="4"/>` +
-      `<circle class="core" cx="${cx}" cy="${cy}" r="4"/>`;
+    g.setAttribute("tabindex", "0");
+    g.setAttribute("role", "button");
+    g.innerHTML = `<circle class="pulse" cx="${x}" cy="${y}" r="3.2"/><circle class="core" cx="${x}" cy="${y}" r="3.2"/>`;
     pinLayer.appendChild(g);
   }
 
   svg.addEventListener("click", e => {
     const code = e.target.closest("[data-code]")?.dataset.code;
-    if (COUNTRIES[code]) select(code, true);
+    if (FACTS_BY_CODE[code]) select(code, 0, true);
   });
   svg.addEventListener("keydown", e => {
-    if ((e.key === "Enter" || e.key === " ") && COUNTRIES[e.target.dataset.code]) {
+    const code = e.target.closest("[data-code]")?.dataset.code;
+    if ((e.key === "Enter" || e.key === " ") && FACTS_BY_CODE[code]) {
       e.preventDefault();
-      select(e.target.dataset.code, true);
+      select(code, 0, true);
     }
   });
   svg.addEventListener("mousemove", e => {
@@ -176,7 +195,9 @@ function drawMap() {
     if (!el) { tooltip.classList.remove("show"); return; }
     const code = el.dataset.code;
     const en = svg.querySelector(`path[data-code="${code}"]`)?.dataset.en || "";
-    tooltip.innerHTML = COUNTRIES[code] ? `${C(code).emoji} ${C(code).name}` : `${en}<small>${t("map.notIncluded")}</small>`;
+    tooltip.innerHTML = FACTS_BY_CODE[code]
+      ? `${FACTS_BY_CODE[code][0].emoji} ${countryName(code)}`
+      : `${en}<small>${t("map.notIncluded")}</small>`;
     const r = svg.parentElement.getBoundingClientRect();
     tooltip.style.left = (e.clientX - r.left) + "px";
     tooltip.style.top = (e.clientY - r.top) + "px";
@@ -188,19 +209,80 @@ function drawMap() {
   refresh();
 }
 
+// 靠得太近的圓點（例如梵蒂岡和聖馬利諾、加勒比海小島）互相推開，每個都點得到
+function spreadPins(pins, minDist) {
+  for (let round = 0; round < 60; round++) {
+    let moved = false;
+    for (let i = 0; i < pins.length; i++) {
+      for (let j = i + 1; j < pins.length; j++) {
+        const a = pins[i], b = pins[j];
+        let dx = b.x - a.x, dy = b.y - a.y;
+        let d = Math.hypot(dx, dy);
+        if (d >= minDist) continue;
+        if (d < 0.01) { dx = 1; dy = 0; d = 1; }      // 完全重疊時，往左右推
+        const push = (minDist - d) / 2;
+        a.x -= dx / d * push; a.y -= dy / d * push;
+        b.x += dx / d * push; b.y += dy / d * push;
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+}
+
+/* 把經緯度換成地圖座標：
+   地圖用的是米勒投影（Miller），先用投影公式算出一個值，
+   再拿地圖上已經有的國家（知道經緯度、也知道在圖上的位置）去「對齊」比例，
+   這樣不用知道地圖檔內部的參數也能算準。 */
+function makeProjection(landLayer) {
+  const miller = (lat, lon) => [lon * Math.PI / 180, 1.25 * Math.log(Math.tan(Math.PI / 4 + 0.4 * lat * Math.PI / 180))];
+  let pts = [];
+  for (const [code, c] of Object.entries(COUNTRIES)) {
+    const path = landLayer.querySelector(`[data-code="${code}"]`);
+    if (!path) continue;
+    const b = path.getBBox();
+    if (b.width > 120 || b.width * b.height < 4) continue;   // 太大（形狀複雜）或太小都不準，不拿來對齊
+    const [mx, my] = miller(c.lat, c.lon);
+    pts.push({ mx, my, x: b.x + b.width / 2, y: b.y + b.height / 2 });
+  }
+  if (pts.length < 10) return null;
+
+  // 一維最小平方法：x ≈ a·mx + b，y ≈ c·my + d
+  const fit = (us, vs) => {
+    const n = us.length, mu = us.reduce((s, v) => s + v, 0) / n, mv = vs.reduce((s, v) => s + v, 0) / n;
+    let num = 0, den = 0;
+    us.forEach((u, i) => { num += (u - mu) * (vs[i] - mv); den += (u - mu) ** 2; });
+    const k = num / den;
+    return [k, mv - k * mu];
+  };
+  let fx, fy;
+  for (let round = 0; round < 2; round++) {          // 第二輪丟掉誤差最大的 20% 再算一次
+    fx = fit(pts.map(p => p.mx), pts.map(p => p.x));
+    fy = fit(pts.map(p => p.my), pts.map(p => p.y));
+    pts = pts
+      .map(p => ({ ...p, err: Math.hypot(fx[0] * p.mx + fx[1] - p.x, fy[0] * p.my + fy[1] - p.y) }))
+      .sort((a, b) => a.err - b.err)
+      .slice(0, Math.ceil(pts.length * 0.8));
+  }
+  return (lat, lon) => {
+    const [mx, my] = miller(lat, lon);
+    return [fx[0] * mx + fx[1], fy[0] * my + fy[1]];
+  };
+}
+
 // 地圖上可點國家的語音說明（螢幕閱讀器用），換語言時要更新
 function updateLabels() {
   svg.setAttribute("aria-label", t("map.svgLabel"));
-  svg.querySelectorAll("path.featured").forEach(p => {
-    const c = C(p.dataset.code);
-    p.setAttribute("aria-label", `${c.name}：${c.title}`);
+  svg.querySelectorAll(".featured, .pin").forEach(el => {
+    el.setAttribute("aria-label", countryName(el.dataset.code));
   });
 }
 
 /* ===== 選擇國家 → 顯示小知識卡片 ===== */
 // byUser：使用者自己點的才播音樂（瀏覽器不允許網頁自動發出聲音）
-function select(code, byUser = false) {
+function select(code, index = 0, byUser = false) {
   current = code;
+  factIndex = index;
   if (!explored.has(code)) {
     explored.add(code);
     saveExplored(explored);
@@ -208,23 +290,30 @@ function select(code, byUser = false) {
   }
   renderCountry();
   refresh();
-  if (byUser && soundOn) playTune(code, card.querySelector(".play-btn"));
+  if (byUser && soundOn) playTune(tuneKey(FACTS_BY_CODE[code][factIndex]), card.querySelector(".play-btn"));
 }
 
 function renderCountry() {
-  const code = current;
-  const c = C(code);
-  card.dataset.tune = code;
+  const list = FACTS_BY_CODE[current];
+  const f = list[factIndex];
+  const fx = F(f);
+  card.dataset.tune = tuneKey(f);
   card.innerHTML = `
     <div class="pop">
-      <div class="big-emoji">${c.emoji}</div>
-      <h2>${c.name}</h2>
-      <div class="meta"><span>${c.continent}</span><span class="tag ${c.cat}">${catName(c.cat)}</span></div>
-      <h3>${c.title}</h3>
-      <p>${c.fact}</p>
-      <div class="bonus"><b>💡 ${t("card.didYouKnow")}</b>${c.bonus}</div>
-      <p class="tune-name">🎵 ${tuneLabel(code)}</p>
-      ${cardActions(code, { tune: code, share: { title: `${c.name}｜${c.title}`, text: `${c.emoji} ${c.name}｜${c.title} — ${t("brand")}`, hash: code } })}
+      <div class="big-emoji">${fx.emoji}</div>
+      <h2>${fx.name}</h2>
+      <div class="meta"><span>${fx.continent}</span><span class="tag ${fx.cat}">${catName(fx.cat)}</span></div>
+      ${list.length > 1 ? `
+        <div class="fact-pager">
+          <button type="button" class="act" id="prev-fact" aria-label="${t("map.prevFact")}">‹</button>
+          <span>${t("map.factOf", { n: factIndex + 1, total: list.length })}</span>
+          <button type="button" class="act" id="next-fact" aria-label="${t("map.nextFact")}">›</button>
+        </div>` : ""}
+      <h3>${fx.title}</h3>
+      <p>${fx.fact}</p>
+      ${fx.bonus ? `<div class="bonus"><b>💡 ${t("card.didYouKnow")}</b>${fx.bonus}</div>` : ""}
+      <p class="tune-name">🎵 ${tuneLabel(tuneKey(f))}</p>
+      ${cardActions(f.id, { tune: tuneKey(f), share: shareInfo(fx) })}
       <div class="card-actions">
         <button class="btn ghost" id="back">${t("map.back")}</button>
         <button class="btn" id="next">${t("map.next")}</button>
@@ -232,8 +321,15 @@ function renderCountry() {
     </div>`;
   document.getElementById("back").onclick = () => { current = null; stopTune(); renderIntro(); refresh(); };
   document.getElementById("next").onclick = () => randomPick(true);
+  if (list.length > 1) {
+    const go = step => { factIndex = (factIndex + step + list.length) % list.length; renderCountry(); if (soundOn) playTune(tuneKey(list[factIndex]), card.querySelector(".play-btn")); };
+    document.getElementById("prev-fact").onclick = () => go(-1);
+    document.getElementById("next-fact").onclick = () => go(1);
+  }
 }
 
+// 起始畫面：搜尋國家，或從推薦的國家開始
+let suggestions = [];
 function renderIntro() {
   delete card.dataset.tune;
   card.innerHTML = `
@@ -241,21 +337,45 @@ function renderIntro() {
       <div class="big-emoji">🧭</div>
       <h2>${t("map.introTitle")}</h2>
       <p>${t("map.introText")}</p>
-      <div class="pick-list">${CODES.filter(visible).map(code =>
-        `<button data-pick="${code}" class="${explored.has(code) ? "explored" : ""}">${C(code).name}</button>`
-      ).join("")}</div>
+      <input type="search" class="search" id="country-search" placeholder="${t("map.search")}" value="${escapeHTML(searchText)}" autocomplete="off">
+      <p class="pick-hint" id="pick-hint"></p>
+      <div class="pick-list" id="pick-list"></div>
     </div>`;
-  card.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => select(b.dataset.pick, true));
+  const input = document.getElementById("country-search");
+  input.oninput = () => { searchText = input.value; renderPicks(); };
+  renderPicks();
+}
+
+function renderPicks() {
+  const q = searchText.trim().toLowerCase();
+  let codes;
+  if (q) {
+    codes = CODES.filter(c => visible(c) &&
+      (COUNTRIES[c].name.includes(q) || COUNTRIES[c].en.toLowerCase().includes(q))).slice(0, 24);
+    document.getElementById("pick-hint").textContent = codes.length ? "" : t("map.noMatch");
+  } else {
+    // 沒有搜尋時，推薦 12 個還沒探索的國家（換分類時重新挑）
+    if (!suggestions.length || suggestions.some(c => !visible(c))) {
+      const pool = CODES.filter(c => visible(c) && !explored.has(c));
+      suggestions = (pool.length ? pool : CODES.filter(visible)).sort(() => Math.random() - 0.5).slice(0, 12);
+    }
+    codes = suggestions;
+    document.getElementById("pick-hint").textContent = t("map.suggest");
+  }
+  document.getElementById("pick-list").innerHTML = codes.map(code =>
+    `<button data-pick="${code}" class="${explored.has(code) ? "explored" : ""}">${countryName(code)}</button>`).join("");
+  card.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => select(b.dataset.pick, 0, true));
 }
 
 /* ===== 篩選、隨機、進度 ===== */
-function visible(code) { return filter === "all" || COUNTRIES[code].cat === filter; }
-
 function randomPick(byUser = true) {
   const pool = CODES.filter(c => visible(c) && c !== current);
   const unexplored = pool.filter(c => !explored.has(c));
   const list = unexplored.length ? unexplored : pool;
-  select(list[Math.floor(Math.random() * list.length)], byUser);
+  const code = list[Math.floor(Math.random() * list.length)];
+  // 有分類篩選時，直接跳到符合分類的那一則
+  const index = Math.max(0, FACTS_BY_CODE[code].findIndex(f => filter === "all" || f.cat === filter));
+  select(code, index, byUser);
 }
 
 function refresh() {
@@ -267,6 +387,7 @@ function refresh() {
   });
   svg.querySelectorAll(".pin").forEach(g => {
     g.classList.toggle("explored", explored.has(g.dataset.code));
+    g.classList.toggle("active", g.dataset.code === current);
     g.classList.toggle("hidden", !visible(g.dataset.code));
   });
   document.getElementById("progress-label").innerHTML =
@@ -279,7 +400,7 @@ document.querySelectorAll(".chip").forEach(chip => {
   chip.onclick = () => {
     filter = chip.dataset.filter;
     document.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === chip));
-    if (!current) renderIntro();
+    if (!current) renderPicks();
     refresh();
   };
 });
@@ -293,18 +414,22 @@ document.addEventListener("langchange", () => {
 });
 
 document.getElementById("stat-countries").textContent = CODES.length;
+document.getElementById("stat-facts").textContent = FACTS.length;
 renderIntro();
 drawMap();
 refresh();
 // 已經探索過的人第一次看到徽章功能時，不要一次跳出一堆恭喜
 if (getSetting("badgesSeen", null) === null) setSetting("badgesSeen", String(badgeList().filter(b => explored.size >= b.n).map(b => b.n).pop() || 0));
 
-// 從文化圖鑑點「在地圖上看」過來時，網址會帶 #國家代碼，例如 index.html#TW
-const fromHash = location.hash.slice(1);
-if (COUNTRIES[fromHash]) {
-  select(fromHash);
+// 從圖鑑點「在地圖上看」過來時，網址會帶小知識編號（例如 #TH2、#TW）
+function openFromHash() {
+  const f = FACT_BY_ID[location.hash.slice(1)];
+  if (!f) return;
+  select(f.code, FACTS_BY_CODE[f.code].indexOf(f));
   document.getElementById("explore").scrollIntoView();
 }
+openFromHash();
+window.addEventListener("hashchange", openFromHash);
 </script>
 </body>
 </html>

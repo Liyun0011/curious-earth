@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261113b">
+<link rel="stylesheet" href="style.css?v=20261113c">
 <!-- 先套用深淺色，避免畫面閃一下 -->
 <script>
   try {
@@ -40,7 +40,7 @@
 <main class="page">
   <div class="page-head">
     <div>
-      <h1 data-i18n="share.full">分享你的日常</h1>
+      <h1 data-i18n="nav.share">分享你的日常</h1>
       <p data-i18n="share.sub">你覺得理所當然的小事，可能是別人眼中的不可思議。寫下來，讓它出現在文化圖鑑裡！</p>
     </div>
     <span class="mode" id="mode" data-i18n="share.checking">檢查連線中…</span>
@@ -126,9 +126,9 @@
 
 <footer class="site-footer" data-i18n="footer">地球人的奇妙日常 · 網頁製作期末專題</footer>
 
-<script src="data.js?v=20261113b"></script>
-<script src="i18n.js?v=20261113b"></script>
-<script src="app.js?v=20261113b"></script>
+<script src="data.js?v=20261113c"></script>
+<script src="i18n.js?v=20261113c"></script>
+<script src="app.js?v=20261113c"></script>
 <script>
 const form = document.getElementById("share-form");
 const preview = document.getElementById("preview");
@@ -142,13 +142,13 @@ let lastError = null;    // 記住目前的錯誤，換語言時重新顯示
 document.getElementById("emoji-group").innerHTML = EMOJIS.map((e, i) =>
   `<label><input type="radio" name="emoji" value="${e}" ${i === 0 ? "checked" : ""}><span>${e}</span></label>`).join("");
 function fillCountryList() {
-  document.getElementById("country-list").innerHTML = CODES.map(c => `<option value="${C(c).name}">`).join("");
+  document.getElementById("country-list").innerHTML = CODES.map(c => `<option value="${countryName(c)}">`).join("");
 }
 
 // 輸入已收錄的國家時（中英文都可以），自動帶入洲別
 form.country.addEventListener("change", () => {
   const value = form.country.value.trim().toLowerCase();
-  const code = CODES.find(c => COUNTRIES[c].name === value || COUNTRIES_EN[c].name.toLowerCase() === value);
+  const code = CODES.find(c => COUNTRIES[c].name === value || COUNTRIES[c].en.toLowerCase() === value);
   if (code && !form.continent.value) form.continent.value = COUNTRIES[code].continent;
   updatePreview();
 });

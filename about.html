@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261113b">
+<link rel="stylesheet" href="style.css?v=20261113c">
 <!-- 先套用深淺色，避免畫面閃一下 -->
 <script>
   try {
@@ -52,10 +52,10 @@
   <section>
     <h2 data-i18n="about.guideTitle">網站導覽</h2>
     <div class="feature-grid">
-      <a class="card" href="index.html"><span class="big-emoji">🗺️</span><b data-i18n="map.full">探索地圖</b><span class="d" data-i18n="about.f1">點擊國家，解鎖當地的奇妙日常，集滿徽章</span></a>
-      <a class="card" href="culture.html"><span class="big-emoji">📖</span><b data-i18n="culture.full">文化圖鑑</b><span class="d" data-i18n="about.f2">瀏覽所有內容，聽音樂、按讚或砸雞蛋</span></a>
+      <a class="card" href="index.html"><span class="big-emoji">🗺️</span><b data-i18n="nav.map">探索地圖</b><span class="d" data-i18n="about.f1">點擊國家，解鎖當地的奇妙日常，集滿徽章</span></a>
+      <a class="card" href="culture.html"><span class="big-emoji">📖</span><b data-i18n="nav.culture">文化圖鑑</b><span class="d" data-i18n="about.f2">瀏覽所有內容，聽音樂、按讚或砸雞蛋</span></a>
       <a class="card" href="quiz.html"><span class="big-emoji">❓</span><b data-i18n="quiz.title">猜猜在哪國</b><span class="d" data-i18n="about.f3">10 題小測驗，考考你的世界觀</span></a>
-      <a class="card" href="share.html"><span class="big-emoji">✍️</span><b data-i18n="share.full">分享你的日常</b><span class="d" data-i18n="about.f4">投稿你身邊的不可思議</span></a>
+      <a class="card" href="share.html"><span class="big-emoji">✍️</span><b data-i18n="nav.share">分享你的日常</b><span class="d" data-i18n="about.f4">投稿你身邊的不可思議</span></a>
     </div>
   </section>
 
@@ -72,10 +72,13 @@
   <section>
     <h2 data-i18n="about.sourcesTitle">資料來源</h2>
     <p data-i18n="about.sourcesText">網站內容整理自以下資料，如有錯誤歡迎指正。</p>
-    <table class="sources">
-      <thead><tr><th data-i18n="about.thCountry">國家</th><th data-i18n="about.thTopic">主題</th><th data-i18n="about.thSource">參考來源</th></tr></thead>
-      <tbody id="sources"></tbody>
-    </table>
+    <details class="sources-box">
+      <summary id="sources-summary"></summary>
+      <table class="sources">
+        <thead><tr><th data-i18n="about.thCountry">國家</th><th data-i18n="about.thTopic">主題</th><th data-i18n="about.thSource">參考來源</th></tr></thead>
+        <tbody id="sources"></tbody>
+      </table>
+    </details>
     <p class="credits" data-i18n="about.credits">世界地圖資料：jsvectormap（MIT 授權）· 字型：Noto Sans TC（Google Fonts）· 音樂：用 Web Audio API 即時合成，台灣為貝多芬《給愛麗絲》，其餘為原創小曲</p>
   </section>
 
@@ -93,18 +96,19 @@
 
 <footer class="site-footer" data-i18n="footer">地球人的奇妙日常 · 網頁製作期末專題</footer>
 
-<script src="data.js?v=20261113b"></script>
-<script src="i18n.js?v=20261113b"></script>
-<script src="app.js?v=20261113b"></script>
+<script src="data.js?v=20261113c"></script>
+<script src="i18n.js?v=20261113c"></script>
+<script src="app.js?v=20261113c"></script>
 <script>
-// 參考來源：查證後把網址或書名填進 SOURCES 就會顯示
+// 參考來源：查證後把網址或書名填進 SOURCES 就會顯示（key 是小知識的 id，例如 TW、TH2）
 const SOURCES = {
   // TW: "例如：臺北市政府環境保護局網站",
 };
 function renderSources() {
-  document.getElementById("sources").innerHTML = CODES.map(code => {
-    const c = C(code);
-    const src = SOURCES[code];
+  document.getElementById("sources-summary").textContent = t("about.showSources", { n: FACTS.length });
+  document.getElementById("sources").innerHTML = FACTS.map(f => {
+    const c = F(f);
+    const src = SOURCES[f.id];
     return `<tr><td>${c.emoji} ${c.name}</td><td>${c.title}</td>
             <td class="${src ? "" : "todo"}">${src || t("about.todo")}</td></tr>`;
   }).join("");

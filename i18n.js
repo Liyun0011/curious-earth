@@ -7,6 +7,10 @@ const I18N = {
   zh: {
     "brand": "地球人的奇妙日常",
     "stat.facts": "則奇妙日常",
+    "map.zoomIn": "放大",
+    "map.zoomOut": "縮小",
+    "map.zoomReset": "回到原本大小",
+    "map.zoomHint": "滾輪縮放・放大後可拖曳移動・手機用兩指縮放",
     "map.search": "🔍 搜尋國家，例如：冰島",
     "map.suggest": "還沒去過的國家，挑一個吧：",
     "map.noMatch": "找不到這個國家，換個關鍵字試試",
@@ -194,6 +198,10 @@ const I18N = {
   en: {
     "brand": "Curious Earthlings",
     "stat.facts": "everyday wonders",
+    "map.zoomIn": "Zoom in",
+    "map.zoomOut": "Zoom out",
+    "map.zoomReset": "Reset zoom",
+    "map.zoomHint": "Scroll to zoom · drag when zoomed · pinch on phones",
     "map.search": "🔍 Search a country, e.g. Iceland",
     "map.suggest": "Places you haven't been yet — pick one:",
     "map.noMatch": "No country found — try another word",

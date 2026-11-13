@@ -326,7 +326,28 @@ table.sources { width: 100%; border-collapse: collapse; background: var(--card);
 .more-wrap { text-align: center; margin-top: 24px; }
 .sources-box summary { cursor: pointer; font-weight: 700; color: var(--accent); margin-bottom: 12px; }
 .pin { outline: none; }
-.pin.active .core, .pin:focus .core { fill: var(--ink) !important; r: 4.5; }
+.pin.active .core, .pin:focus .core { fill: var(--ink) !important; }
+
+/* ---------- 地圖縮放 ---------- */
+#map { cursor: default; user-select: none; }
+#map.zoomed { cursor: grab; }
+#map.zoomed:active { cursor: grabbing; }
+.land { vector-effect: non-scaling-stroke; }
+.zoom-ctrl {
+  position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+  box-shadow: 0 4px 12px var(--shadow);
+}
+.zoom-ctrl button {
+  width: 36px; height: 34px; border: 0; background: transparent; color: var(--ink);
+  font: inherit; font-size: 18px; cursor: pointer;
+}
+.zoom-ctrl button + button { border-top: 1px solid var(--line); }
+.zoom-ctrl button:hover { background: var(--bg); }
+.zoom-hint {
+  position: absolute; left: 20px; bottom: 14px; margin: 0; font-size: 12px; color: var(--muted);
+  background: var(--card); padding: 2px 10px; border-radius: 99px; opacity: .85; pointer-events: none;
+}
 
 /* ---------- 右上角：音樂／深淺色／語言 ---------- */
 .controls { display: flex; gap: 6px; align-items: center; }

@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261113d">
+<link rel="stylesheet" href="style.css?v=20261113e">
 <!-- 先套用深淺色，避免畫面閃一下 -->
 <script>
   try {
@@ -79,6 +79,12 @@
   <div class="map-layout">
     <section class="map-wrap" aria-label="互動世界地圖" data-i18n-aria="map.label">
       <svg id="map" role="img"></svg>
+      <div class="zoom-ctrl" id="zoom-ctrl" hidden>
+        <button type="button" id="zoom-in" data-i18n-aria="map.zoomIn" aria-label="放大">＋</button>
+        <button type="button" id="zoom-out" data-i18n-aria="map.zoomOut" aria-label="縮小">−</button>
+        <button type="button" id="zoom-reset" data-i18n-aria="map.zoomReset" aria-label="回到原本大小">⟲</button>
+      </div>
+      <p class="zoom-hint" id="zoom-hint" data-i18n="map.zoomHint" hidden>滾輪縮放・拖曳移動</p>
       <div class="tooltip" id="tooltip"></div>
       <div class="map-status" id="status" data-i18n="map.loading">地圖載入中…</div>
     </section>
@@ -99,9 +105,9 @@
   window.jsVectorMap = { addMap: function (name, data) { window.__maps[name] = data; } };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/jsvectormap@1.5.3/dist/maps/world.js"></script>
-<script src="data.js?v=20261113d"></script>
-<script src="i18n.js?v=20261113d"></script>
-<script src="app.js?v=20261113d"></script>
+<script src="data.js?v=20261113e"></script>
+<script src="i18n.js?v=20261113e"></script>
+<script src="app.js?v=20261113e"></script>
 
 <script>
 const explored = loadExplored();
@@ -168,16 +174,19 @@ function drawMap() {
     } else continue;
     pins.push({ code, x, y });
   }
-  spreadPins(pins, 7.5);
-  for (const { code, x, y } of pins) {
+  for (const pin of pins) {
     const g = document.createElementNS(NS, "g");
-    g.setAttribute("class", "pin " + mainCat(code));
-    g.dataset.code = code;
+    g.setAttribute("class", "pin " + mainCat(pin.code));
+    g.dataset.code = pin.code;
     g.setAttribute("tabindex", "0");
     g.setAttribute("role", "button");
-    g.innerHTML = `<circle class="pulse" cx="${x}" cy="${y}" r="3.2"/><circle class="core" cx="${x}" cy="${y}" r="3.2"/>`;
+    g.innerHTML = `<circle class="pulse"/><circle class="core"/>`;
     pinLayer.appendChild(g);
+    pin.el = g;
+    pin.tx = pin.x; pin.ty = pin.y;     // 真正的位置（推開之前）
   }
+  pinData = pins;
+  setupZoom(data);
 
   svg.addEventListener("click", e => {
     const code = e.target.closest("[data-code]")?.dataset.code;
@@ -207,6 +216,128 @@ function drawMap() {
 
   updateLabels();
   refresh();
+}
+
+/* ===== 縮放與拖曳 =====
+   用改變 SVG 的 viewBox（看到的範圍）來縮放：範圍越小，看起來越大 */
+let pinData = [];
+let full = null;    // 整張地圖的範圍
+let view = null;    // 目前看到的範圍
+let suppressClick = false;
+const MAX_ZOOM = 12;
+
+function setupZoom(data) {
+  full = { x: 0, y: 0, w: data.width, h: data.height };
+  view = { ...full };
+  applyView();
+  document.getElementById("zoom-ctrl").hidden = false;
+  document.getElementById("zoom-hint").hidden = false;
+
+  // 滑鼠滾輪：以游標位置為中心縮放
+  svg.addEventListener("wheel", e => {
+    e.preventDefault();
+    zoomAt(clientToMap(e.clientX, e.clientY), Math.exp(-e.deltaY * 0.0015));
+  }, { passive: false });
+
+  // 拖曳移動、兩指縮放（滑鼠、觸控筆、手指都用 Pointer Events 處理）
+  const pointers = new Map();
+  let start = null;
+  svg.addEventListener("pointerdown", e => {
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    start = gestureStart(pointers);
+  });
+  svg.addEventListener("pointermove", e => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const now = gestureStart(pointers);
+    const rect = svg.getBoundingClientRect();
+    let w = start.view.w;
+    if (pointers.size >= 2 && start.dist) {
+      w = clamp(start.view.w * start.dist / now.dist, full.w / MAX_ZOOM, full.w);
+    } else if (Math.hypot(now.cx - start.cx, now.cy - start.cy) < 4) {
+      return;                                   // 移動太少，當作點擊
+    }
+    if (zoomLevel() === 1 && pointers.size < 2) return;   // 沒放大時不拖曳，讓手機可以正常捲動頁面
+    suppressClick = true;
+    if (!svg.hasPointerCapture(e.pointerId)) svg.setPointerCapture(e.pointerId);
+    const h = w * full.h / full.w;
+    // 讓手指／游標底下的那一點維持在同一個地方
+    view = {
+      w, h,
+      x: start.px - (now.cx - rect.left) / rect.width * w,
+      y: start.py - (now.cy - rect.top) / rect.height * h
+    };
+    applyView();
+  });
+  const end = e => {
+    pointers.delete(e.pointerId);
+    if (pointers.size) start = gestureStart(pointers);
+  };
+  svg.addEventListener("pointerup", end);
+  svg.addEventListener("pointercancel", end);
+  // 拖曳結束時不要順便選到國家
+  svg.addEventListener("click", e => {
+    if (suppressClick) { e.stopImmediatePropagation(); suppressClick = false; }
+  }, true);
+
+  document.getElementById("zoom-in").onclick = () => zoomAt(center(), 1.6);
+  document.getElementById("zoom-out").onclick = () => zoomAt(center(), 1 / 1.6);
+  document.getElementById("zoom-reset").onclick = () => { view = { ...full }; applyView(); };
+}
+
+// 記下手勢開始時的狀態：中心點、兩指距離、中心點在地圖上的位置
+function gestureStart(pointers) {
+  const pts = [...pointers.values()];
+  const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+  const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+  const dist = pts.length >= 2 ? Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) : 0;
+  const [px, py] = clientToMap(cx, cy);
+  return { cx, cy, dist, px, py, view: { ...view } };
+}
+
+function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
+function zoomLevel() { return full.w / view.w; }
+function center() { return [view.x + view.w / 2, view.y + view.h / 2]; }
+
+// 螢幕座標 → 地圖座標
+function clientToMap(x, y) {
+  const pt = new DOMPoint(x, y).matrixTransform(svg.getScreenCTM().inverse());
+  return [pt.x, pt.y];
+}
+
+function zoomAt([px, py], factor) {
+  const w = clamp(view.w / factor, full.w / MAX_ZOOM, full.w);
+  const ratio = w / view.w;
+  view = { x: px - (px - view.x) * ratio, y: py - (py - view.y) * ratio, w, h: w * full.h / full.w };
+  applyView();
+}
+
+let viewFrame = 0;
+function applyView() {
+  // 不能移出地圖範圍
+  view.x = clamp(view.x, 0, full.w - view.w);
+  view.y = clamp(view.y, 0, full.h - view.h);
+  svg.setAttribute("viewBox", `${view.x} ${view.y} ${view.w} ${view.h}`);
+  svg.classList.toggle("zoomed", zoomLevel() > 1.01);
+  // 沒放大時，手機可以上下捲動頁面；放大後，手指拖曳是移動地圖
+  svg.style.touchAction = zoomLevel() > 1.01 ? "none" : "pan-y";
+  cancelAnimationFrame(viewFrame);
+  viewFrame = requestAnimationFrame(layoutPins);
+}
+
+// 圓點在螢幕上維持一樣大；放大後彼此距離變遠，就慢慢回到真正的位置
+function layoutPins() {
+  const k = view.w / full.w;
+  const pins = pinData.map(p => ({ ...p, x: p.tx, y: p.ty }));
+  spreadPins(pins, 7.5 * k);
+  for (const p of pins) {
+    p.el.querySelectorAll("circle").forEach(c => {
+      c.setAttribute("cx", p.x);
+      c.setAttribute("cy", p.y);
+      c.setAttribute("r", 3.2 * k);
+      c.style.strokeWidth = 1.4 * k;
+    });
+  }
 }
 
 // 靠得太近的圓點（例如梵蒂岡和聖馬利諾、加勒比海小島）互相推開，每個都點得到

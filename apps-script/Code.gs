@@ -139,9 +139,12 @@ function findOwnRow(sheet, id, password) {
   const rows = sheet.getRange(2, 1, last - 1, PASS_COL).getValues();
   for (let i = 0; i < rows.length; i++) {
     if ('S' + new Date(rows[i][0]).getTime() !== String(id)) continue;
-    const stored = String(rows[i][PASS_COL - 1] || '');
+    const raw = rows[i][PASS_COL - 1];
+    const stored = String(raw === '' || raw == null ? '' : raw);
     const isHashed = /^[0-9a-f]{64}$/.test(stored);
-    const ok = stored !== '' && (isHashed ? stored === passHash(id, password) : stored === password);
+    // 在試算表手動打 0123 這種密碼時，試算表會把它變成數字 123（吃掉開頭的 0），所以數字也要比對
+    const plainOk = stored === password || (typeof raw === 'number' && /^\d+$/.test(password) && Number(password) === raw);
+    const ok = stored !== '' && (isHashed ? stored === passHash(id, password) : plainOk);
     if (!ok) return { error: stored ? '密碼不正確' : '這則投稿沒有設定編輯密碼，請到試算表 J 欄設定' };
     // 在試算表手動打的明碼，第一次用對之後換成加密後的值
     if (!isHashed) sheet.getRange(i + 2, PASS_COL).setValue(passHash(id, password));
